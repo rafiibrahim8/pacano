@@ -1,0 +1,37 @@
+{
+    "official": {
+        "tier1": [
+            "https://mirror.aarnet.edu.au/pub/archlinux/$repo/os/$arch",
+            "https://mirrors.ocf.berkeley.edu/archlinux/$repo/os/$arch",
+            "https://geo.mirror.pkgbuild.com/$repo/os/$arch"
+        ],
+        "tier2": [
+            "http://mirror.xeonbd.com/archlinux/$repo/os/$arch",
+            "http://mirror.aktkn.sg/archlinux/$repo/os/$arch",
+            "http://archlinux.mirror.net.in/archlinux/$repo/os/$arch",
+            "https://repo.albony.xyz/$repo/os/$arch",
+            "http://mirrors.bfsu.edu.cn/archlinux/$repo/os/$arch",
+            "http://ftp.jaist.ac.jp/pub/Linux/ArchLinux/$repo/os/$arch",
+            "http://mirror.rackspace.com/archlinux/$repo/os/$arch"
+        ]
+    },
+    "chaotic": [
+        "https://geo-mirror.chaotic.cx/$repo/$arch",
+        "https://cdn-mirror.chaotic.cx/$repo/$arch",
+        "https://us-ut-mirror.chaotic.cx/$repo/$arch",
+        "https://es-mirror.chaotic.cx/$repo/$arch",
+        "https://es-2-mirror.chaotic.cx/$repo/$arch",
+        "https://de-mirror.chaotic.cx/$repo/$arch",
+        "https://de-2-mirror.chaotic.cx/$repo/$arch",
+        "https://de-3-mirror.chaotic.cx/$repo/$arch",
+        "https://de-4-mirror.chaotic.cx/$repo/$arch",
+        "https://fr-mirror.chaotic.cx/$repo/$arch",
+        "https://br-mirror.chaotic.cx/$repo/$arch",
+        "https://kr-mirror.chaotic.cx/$repo/$arch",
+        "https://bg-mirror.chaotic.cx/$repo/$arch",
+        "https://ca-mirror.chaotic.cx/$repo/$arch",
+        "https://in-mirror.chaotic.cx/$repo/$arch",
+        "https://in-2-mirror.chaotic.cx/$repo/$arch",
+        "https://sg-mirror.chaotic.cx/$repo/$arch"
+    ]
+}

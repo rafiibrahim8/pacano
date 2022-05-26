@@ -1,0 +1,5 @@
+node_modules
+pacano.log.txt
+database.sqlite
+mirrors.json.bak
+.env
