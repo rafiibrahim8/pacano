@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-const TEMP_DIRECTORY = '/tmp/pacano';
+const TEMP_DIRECTORY = process.env.TEMP_DIRECTORY || '/tmp/pacano';
 const MIRRORDIR = process.env.MIRRORDIR || '/var/archlinux';
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 const LOG_FILENAME = process.env.LOG_FILENAME || 'pacano.log.txt'

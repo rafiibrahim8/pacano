@@ -1,6 +1,8 @@
 import axios from "axios";
 import fs from "fs";
+import fs_extra from "fs-extra";
 import path from "path";
+import crypto from "crypto";
 import logger from "../logger";
 
 interface EtagLastMod {
@@ -14,13 +16,13 @@ interface FileExistMap {
 
 const getEtagAndLastModified = async (url: string): Promise<EtagLastMod> => {
     return axios.head(url).then(response => {
-        let etag = response.headers['etag'] as string;
-        let last_modified = response.headers['last-modified'] as string;
+        let etag = response.headers['etag'];
+        let last_modified = response.headers['last-modified'];
         return { etag, last_modified };
     });
 };
 
-const downloadFile = async (url: string, downloadPath: fs.PathLike): Promise<void> => {
+const downloadFileImpl = async (url: string, downloadPath: string): Promise<void> => {
     logger.verbose(`Downloading file from... ${url}`);
     let fileWrite = fs.createWriteStream(downloadPath);
     return axios.get(url, { responseType: 'stream' }).then(response => {
@@ -40,6 +42,13 @@ const downloadFile = async (url: string, downloadPath: fs.PathLike): Promise<voi
         });
     });
 };
+
+const downloadFile = async (url: string, downloadPath: string): Promise<void> => {
+    let tempFile = path.join('/tmp', crypto.randomBytes(32).toString('hex'));
+    return downloadFileImpl(url, tempFile).then(_ => {
+        return fs_extra.move(tempFile, downloadPath, {overwrite: true});
+    });
+}
 
 const getMirrors = (mirror: string, repo: string, purpose = 'package'): Array<string> => {
     let mirrors = fs.readFileSync(path.join(__dirname, '..', '..', 'mirrors.json'), { encoding: "utf8" });
