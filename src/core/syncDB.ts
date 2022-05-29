@@ -16,33 +16,32 @@ const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
     let allRepoPkgs = _allRepoPkgs.map(value => {
         return {
             name: value.get('name') as string,
+            repo: value.get('repo') as string,
             file_name: value.get('file_name') as string,
+            version: value.get('version') as string,
             times_updated: value.get('times_updated') as number
         }
     });
-
     return parseDB(repoDbPath).then(parsedDB => {
-        let promiseArray: Promise<any>[] = [];
+        let toBeUpdated: any = [];
         allRepoPkgs.forEach(element => {
-            let pkgInfo = parsedDB[element.name];
-            if (!pkgInfo) {
-                logger.error(`Can not find package ${element.name} on repo ${repo_name}`);
+            if(!parsedDB[element.name]){
+                logger.warning(`Can not find package ${element.name} on repo ${repo_name}`);
                 return;
             }
-            promiseArray.push(
-                Packages.update({
-                    file_name: pkgInfo.filename,
+            if (element.file_name !== parsedDB[element.name].file_name) {
+                toBeUpdated.push({
+                    name: element.name,
+                    repo: element.repo,
+                    file_name: parsedDB[element.name].file_name,
+                    version: parsedDB[element.name].version,
                     times_updated: element.times_updated + 1
-                }, { where: { name: element.name } })
-            );
-        });
-        return Promise.allSettled(promiseArray).then(values=>{
-            //let fulfilled = values.filter((value) => value.status === 'fulfilled') as PromiseFulfilledResult<void>[];
-            let rejected = values.filter((value) => value.status === 'rejected') as PromiseRejectedResult[];
-            if(rejected.length !==0){
-                logger.warning('Can not add some package to localDB');
+                });
             }
         });
+        return Packages.bulkCreate(toBeUpdated, {
+            updateOnDuplicate: ['file_name', 'version', 'times_updated'], validate: true
+        }).then();
     });
 }
 
@@ -55,8 +54,8 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
     let etag_lastmod: EtagLastMod;
     let repoLocalDir = path.join(MIRRORDIR, repo_name);
     let localDBPath = path.join(MIRRORDIR, repo_name, `${repo_name}.db`);
-    if(!fs.existsSync(repoLocalDir)){
-        fs.mkdirSync(repoLocalDir, {recursive: true});
+    if (!fs.existsSync(repoLocalDir)) {
+        fs.mkdirSync(repoLocalDir, { recursive: true });
     }
     for (let url of urls) {
         try {
@@ -74,10 +73,12 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
             url = `${url}/${repo_name}.db`;
             await downloadFile(url, localDBPath);
             etag_lastmod = await getEtagAndLastModified(url);
+            logger.verbose(`DB download finished...${repo_name}`);
             await Repos.update(etag_lastmod, { where: { name: repo_name } });
             await syncLocalDBSingle(repo_name);
+            logger.verbose(`DB sync finished...${repo_name}`);
             break;
-        } catch { }
+        } catch(err) { console.log(err); }
     }
 }
 

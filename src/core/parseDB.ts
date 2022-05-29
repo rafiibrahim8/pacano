@@ -7,7 +7,7 @@ import { TEMP_DIRECTORY } from "../config";
 interface PackageDetails {
     name: string,
     version: string,
-    filename: string
+    file_name: string
 }
 
 interface PacmanDB {
@@ -19,13 +19,16 @@ const parsePackageDesc = async (descPath: fs.PathLike): Promise<PackageDetails> 
         let descFile = fs.readFileSync(descPath, { encoding: 'utf-8' });
         let name = Array.from(descFile.matchAll(/%NAME%\n([^\n]+)/g))[0][1];
         let version = Array.from(descFile.matchAll(/%VERSION%\n([^\n]+)/g))[0][1];
-        let filename = Array.from(descFile.matchAll(/%FILENAME%\n([^\n]+)/g))[0][1];
-        return { name, filename, version };
+        let file_name = Array.from(descFile.matchAll(/%FILENAME%\n([^\n]+)/g))[0][1];
+        return { name, file_name, version };
     });
 };
 
 const parseLocalDB = async (dbPath: string): Promise<PacmanDB> => {
     let extractDir = path.join(TEMP_DIRECTORY, path.basename(dbPath).slice(0, -3));
+    if(fs.existsSync(extractDir)){
+        fs.rmSync(extractDir, {recursive: true});
+    }
     fs.mkdirSync(extractDir);
     if (!dbPath.startsWith('/')) {
         dbPath = path.join(process.cwd(), dbPath);
