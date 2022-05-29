@@ -25,7 +25,7 @@ const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
     return parseDB(repoDbPath).then(parsedDB => {
         let toBeUpdated: any = [];
         allRepoPkgs.forEach(element => {
-            if(!parsedDB[element.name]){
+            if (!parsedDB[element.name]) {
                 logger.warning(`Can not find package ${element.name} on repo ${repo_name}`);
                 return;
             }
@@ -78,7 +78,7 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
             await syncLocalDBSingle(repo_name);
             logger.verbose(`DB sync finished...${repo_name}`);
             break;
-        } catch(err) { console.log(err); }
+        } catch (err) { }
     }
 }
 
