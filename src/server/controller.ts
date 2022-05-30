@@ -1,7 +1,7 @@
 import { sequelize } from "../models";
 import express from "express";
 import { getMirrors } from "../core/utils";
-import logger from "../logger";
+import { UPSTREAM_MIRRORS } from "../config";
 
 const Packages = sequelize.models.Packages;
 const Repos = sequelize.models.Repos;
@@ -41,7 +41,7 @@ const addRepo = async (req: express.Request, res: express.Response): Promise<voi
     try {
         getMirrors(req.body.mirror, req.body.repo);
     } catch {
-        res.status(403).json({ msg: `mirror ${req.body.mirror} not found in mirrors.json` });
+        res.status(403).json({ msg: `mirror ${req.body.mirror} not found in ${UPSTREAM_MIRRORS}` });
         return;
     }
     let item_ = await Repos.findOne({ where: { name: req.body.name } });

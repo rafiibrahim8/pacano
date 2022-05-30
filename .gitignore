@@ -2,5 +2,5 @@ node_modules
 pacano.log.txt
 database.sqlite
 database.sqlite-journal
-mirrors.json.bak
+mirrors.bak.json
 .env

@@ -45,13 +45,15 @@ If you need to add newly installed package in your system to be avilable to paca
 
 `MIRRORDIR`: Where mirrored repositories will be stored. Note: This directory must have write permission.
 
-`PORT`: pacano server port.
+`PORT`: pacano server port
 
-`SYNC_INTERVAL`: How often should pacano sync upstream in seconds.
+`SYNC_INTERVAL`: How often should pacano sync upstream in seconds
 
 `LOG_LEVEL`: Logging level for pacnao server
 
-`LOG_FILENAME`: Logging filename for pacano logs.
+`LOG_FILENAME`: Logging filename for pacano logs
+
+`UPSTREAM_MIRRORS`: Upstrem mirrorlist file to use (e.g.: `mirrors.json`)
 
 # ISSUES
 This is very early stage of the program. It might be very buggy. You are always welcome to [create an issue](https://github.com/rafiibrahim8/pacano/issues) or [submit a pull request](https://github.com/rafiibrahim8/pacano/pulls).

@@ -16,7 +16,9 @@ const syncMainImpl = async () => {
 
 const syncMain = async (): Promise<never> => {
     while (true) {
+        logger.verbose('Mirroring...');
         await syncMainImpl();
+        logger.verbose('Going to sleep...');
         await waitSeconds(SYNC_INTERVAL);
     }
 }

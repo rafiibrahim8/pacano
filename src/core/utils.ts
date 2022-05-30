@@ -4,6 +4,7 @@ import fs_extra from "fs-extra";
 import path from "path";
 import crypto from "crypto";
 import logger from "../logger";
+import { UPSTREAM_MIRRORS } from "../config";
 
 interface EtagLastMod {
     etag: string,
@@ -51,7 +52,7 @@ const downloadFile = async (url: string, downloadPath: string): Promise<void> =>
 }
 
 const getMirrors = (mirror: string, repo: string, purpose = 'package'): Array<string> => {
-    let mirrors = fs.readFileSync(path.join(__dirname, '..', '..', 'mirrors.json'), { encoding: "utf8" });
+    let mirrors = fs.readFileSync(UPSTREAM_MIRRORS, { encoding: "utf8" });
     let arch = process.env.ARCH || 'x86_64';
     mirrors = mirrors.replaceAll('$repo', repo).replaceAll('$arch', arch);
     let mirror_list = JSON.parse(mirrors)[mirror];
