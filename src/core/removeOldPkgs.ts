@@ -17,7 +17,7 @@ const removeOldSingleRepo = async (repo: Model<any, any>): Promise<void> => {
     let allFilesDB: FileExistMap = {};
     let toRemove: string[] = [];
     _allFilesDB.forEach(element => allFilesDB[element] = true);
-    allFilesDisk = allFilesDisk.filter(value => !(value.endsWith('.db') || value.endsWith('.sig')));
+    allFilesDisk = allFilesDisk.filter(value => value.endsWith('.zst'));
 
     allFilesDisk.forEach(element => {
         if (!allFilesDB[element]) {
