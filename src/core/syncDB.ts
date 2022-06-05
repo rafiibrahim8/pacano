@@ -54,25 +54,31 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
     let etag_lastmod: EtagLastMod;
     let repoLocalDir = path.join(MIRRORDIR, repo_name);
     let localDBPath = path.join(MIRRORDIR, repo_name, `${repo_name}.db`);
+    let localFilesFilePath = path.join(MIRRORDIR, repo_name, `${repo_name}.files`);
+
     if (!fs.existsSync(repoLocalDir)) {
         fs.mkdirSync(repoLocalDir, { recursive: true });
     }
+
     for (let url of urls) {
         try {
             url = `${url}/${repo_name}.db`;
             etag_lastmod = await getEtagAndLastModified(url);
-            if (fs.existsSync(localDBPath) && ((etag && etag === etag_lastmod.etag) || (last_modified && last_modified === etag_lastmod.last_modified))) {
+            if (fs.existsSync(localDBPath) && fs.existsSync(localFilesFilePath) && ((etag && etag === etag_lastmod.etag) || (last_modified && last_modified === etag_lastmod.last_modified))) {
                 await syncLocalDBSingle(repo_name);
                 return;
             }
             break;
         } catch { };
     }
+
     for (let url of urls) {
         try {
-            url = `${url}/${repo_name}.db`;
-            await downloadFile(url, localDBPath);
-            etag_lastmod = await getEtagAndLastModified(url);
+            let db_file_url = `${url}/${repo_name}.db`;
+            let files_file_url = `${url}/${repo_name}.files`;
+            await downloadFile(db_file_url, localDBPath);
+            await downloadFile(files_file_url, localFilesFilePath);
+            etag_lastmod = await getEtagAndLastModified(db_file_url);
             logger.verbose(`DB download finished...${repo_name}`);
             await Repos.update(etag_lastmod, { where: { name: repo_name } });
             await syncLocalDBSingle(repo_name);
