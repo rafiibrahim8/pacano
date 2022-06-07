@@ -90,17 +90,13 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
 
 const syncDB = async (): Promise<void> => {
     let repos = await Repos.findAll();
-    let promiseArray: Promise<void>[] = [];
-    repos.forEach(value => {
-        promiseArray.push(syncSingle(value));
-    });
-    return Promise.allSettled(promiseArray).then(values => {
-        //let fulfilled = values.filter((value) => value.status === 'fulfilled') as PromiseFulfilledResult<void>[];
-        let rejected = values.filter((value) => value.status === 'rejected') as PromiseRejectedResult[];
-        if (rejected.length !== 0) {
-            logger.error('Failed to sync some DB');
-        };
-    });
+    for (let repo of repos) {
+        try {
+            await syncSingle(repo);
+        } catch (err) {
+            logger.error(`Failed to sync ${repo}. Reason: ${err}`);
+        }
+    }
 };
 
 export default syncDB;
