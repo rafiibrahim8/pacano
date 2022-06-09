@@ -36,24 +36,20 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
             continue;
         }
         if (! await downloadSinglePackage(repo_name, use_mirror, i)) {
-            logger.warning(`Can not download file ${i} of repo ${repo_name}`);
+            logger.warn(`Can not download file ${i} of repo ${repo_name}`);
         }
     }
 }
 
 const downloadPkgs = async (): Promise<void> => {
     let repos = await Repos.findAll();
-    let promiseArray: Promise<void>[] = [];
-    repos.forEach(value => {
-        promiseArray.push(downloadSingleRepo(value));
-    });
-    return Promise.allSettled(promiseArray).then(values => {
-        //let fulfilled = values.filter((value) => value.status === 'fulfilled') as PromiseFulfilledResult<void>[];
-        let rejected = values.filter((value) => value.status === 'rejected') as PromiseRejectedResult[];
-        if (rejected.length !== 0) {
-            logger.error('Failed to sync some DB');
-        };
-    });
+    for (let repo of repos) {
+        try {
+            await downloadSingleRepo(repo);
+        } catch (err) {
+            logger.error(`Failed to download file from repo: ${repo}. Reason: ${err}`);
+        }
+    }
 };
 
 export default downloadPkgs;
