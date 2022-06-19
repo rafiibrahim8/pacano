@@ -15,8 +15,8 @@ const downloadSinglePackage = async (repo_name: string, use_mirror:string, file_
         url = `${url}/${file_name}`;
         let loaclFilePath = path.join(MIRRORDIR, repo_name, file_name);
         try {
+            await downloadFile(`${url}.sig`, `${loaclFilePath}.sig`); // Download `.sig` frist. Reson: issue #1
             await downloadFile(url, loaclFilePath);
-            await downloadFile(`${url}.sig`, `${loaclFilePath}.sig`);
             return true;
         } catch { };
     }
