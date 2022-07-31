@@ -9,6 +9,8 @@ const SYNC_INTERVAL = process.env.SYNC_INTERVAL ? parseInt(process.env.SYNC_INTE
 const PORT = process.env.PORT || 8000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const UPSTREAM_MIRRORS = process.env.UPSTREAM_MIRRORS || 'mirrors.json';
+const FILES_FILE_SYNC_INTERVAL = process.env.FILES_FILE_SYNC_INTERVAL? parseInt(process.env.FILES_FILE_SYNC_INTERVAL) : 0;
+const DOWNLOADER = process.env.DOWNLOADER || 'curl';
 
 export {
     MIRRORDIR,
@@ -18,5 +20,7 @@ export {
     SYNC_INTERVAL,
     PORT,
     ADMIN_TOKEN,
-    UPSTREAM_MIRRORS
+    UPSTREAM_MIRRORS,
+    FILES_FILE_SYNC_INTERVAL,
+    DOWNLOADER
 }

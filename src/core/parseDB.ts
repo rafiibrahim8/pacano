@@ -1,13 +1,15 @@
 import child_process from "child_process";
 import path from "path";
 import fs from "fs";
-import { downloadFile } from "./utils";
+import { downloadFile } from "./downloader";
 import { TEMP_DIRECTORY } from "../config";
 
-interface PackageDetails {
+export interface PackageDetails {
     name: string,
     version: string,
-    file_name: string
+    file_name: string,
+    download_size: number,
+    install_size: number
 }
 
 interface PacmanDB {
@@ -20,14 +22,16 @@ const parsePackageDesc = async (descPath: fs.PathLike): Promise<PackageDetails> 
         let name = Array.from(descFile.matchAll(/%NAME%\n([^\n]+)/g))[0][1];
         let version = Array.from(descFile.matchAll(/%VERSION%\n([^\n]+)/g))[0][1];
         let file_name = Array.from(descFile.matchAll(/%FILENAME%\n([^\n]+)/g))[0][1];
-        return { name, file_name, version };
+        let download_size = parseInt(Array.from(descFile.matchAll(/%CSIZE%\n([^\n]+)/g))[0][1]);
+        let install_size = parseInt(Array.from(descFile.matchAll(/%ISIZE%\n([^\n]+)/g))[0][1]);
+        return { name, file_name, version, download_size, install_size };
     });
 };
 
 const parseLocalDB = async (dbPath: string): Promise<PacmanDB> => {
     let extractDir = path.join(TEMP_DIRECTORY, path.basename(dbPath).slice(0, -3));
-    if(fs.existsSync(extractDir)){
-        fs.rmSync(extractDir, {recursive: true});
+    if (fs.existsSync(extractDir)) {
+        fs.rmSync(extractDir, { recursive: true });
     }
     fs.mkdirSync(extractDir);
     if (!dbPath.startsWith('/')) {

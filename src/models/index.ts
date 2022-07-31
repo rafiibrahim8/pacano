@@ -2,6 +2,7 @@ import { Sequelize } from "sequelize";
 import { logSequelize } from "../logger";
 import Packages from "./Packages";
 import Repos from "./Repos";
+import KeyValuePairs from "./KeyValuePairs";
 
 const sequelize = new Sequelize({
     dialect: 'sqlite',
@@ -11,6 +12,7 @@ const sequelize = new Sequelize({
 
 Packages(sequelize);
 Repos(sequelize);
+KeyValuePairs(sequelize);
 
 sequelize.sync();
 

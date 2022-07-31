@@ -1,10 +1,9 @@
 import axios from "axios";
 import fs from "fs";
-import fs_extra from "fs-extra";
-import path from "path";
-import crypto from "crypto";
-import logger from "../logger";
 import { UPSTREAM_MIRRORS } from "../config";
+import { sequelize } from "../models";
+
+const KeyValuePairs = sequelize.models.KeyValuePairs;
 
 interface EtagLastMod {
     etag: string,
@@ -22,34 +21,6 @@ const getEtagAndLastModified = async (url: string): Promise<EtagLastMod> => {
         return { etag, last_modified };
     });
 };
-
-const downloadFileImpl = async (url: string, downloadPath: string): Promise<void> => {
-    logger.verbose(`Downloading file from... ${url}`);
-    let fileWrite = fs.createWriteStream(downloadPath);
-    return axios.get(url, { responseType: 'stream' }).then(response => {
-        return new Promise((resolve, reject) => {
-            response.data.pipe(fileWrite);
-            let error: any = null;
-            fileWrite.on('error', err => {
-                error = err;
-                fileWrite.close();
-                reject(err);
-            });
-            fileWrite.on('close', () => {
-                if (!error) {
-                    resolve();
-                }
-            });
-        });
-    });
-};
-
-const downloadFile = async (url: string, downloadPath: string): Promise<void> => {
-    let tempFile = path.join('/tmp', crypto.randomBytes(32).toString('hex'));
-    return downloadFileImpl(url, tempFile).then(_ => {
-        return fs_extra.move(tempFile, downloadPath, {overwrite: true});
-    });
-}
 
 const getMirrors = (mirror: string, repo: string, purpose = 'package'): Array<string> => {
     let mirrors = fs.readFileSync(UPSTREAM_MIRRORS, { encoding: "utf8" });
@@ -72,4 +43,16 @@ const waitSeconds = async (seconds: number) => {
     return new Promise(resolve => setTimeout(resolve, seconds * 1000));
 }
 
-export { downloadFile, getMirrors, getEtagAndLastModified, waitSeconds, EtagLastMod, FileExistMap };
+const setValue = async (key: string, value: any) => {
+    await KeyValuePairs.upsert({ key, value: JSON.stringify(value) });
+}
+
+const getValue = async (key: string, default_value: any = null) => {
+    let value = await KeyValuePairs.findOne({ where: { key } });
+    if (value) {
+        return JSON.parse(value.get('value') as string);
+    }
+    return default_value;
+}
+
+export { setValue, getValue, getMirrors, getEtagAndLastModified, waitSeconds, EtagLastMod, FileExistMap };

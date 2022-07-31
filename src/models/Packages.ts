@@ -1,5 +1,4 @@
 import { Sequelize, DataTypes } from "sequelize";
-import Repos from "./Repos";
 
 const Packages = (sequelize: Sequelize): void => {
     sequelize.define('Packages', {
@@ -11,17 +10,23 @@ const Packages = (sequelize: Sequelize): void => {
         repo: {
             type: DataTypes.STRING,
             allowNull: false,
-            references:{
+            references: {
                 model: 'Repos',
                 key: 'name'
             }
-            
+
         },
         file_name: {
             type: DataTypes.STRING,
         },
         version: {
             type: DataTypes.STRING,
+        },
+        download_size: {
+            type: DataTypes.INTEGER,
+        },
+        install_size: {
+            type: DataTypes.INTEGER,
         },
         times_updated: {
             type: DataTypes.INTEGER,
