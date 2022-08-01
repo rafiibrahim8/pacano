@@ -5,12 +5,12 @@ import path from "path";
 import crypto from "crypto";
 import logger from "../logger";
 import { spawnSync } from "child_process";
-import { DOWNLOADER, LOG_LEVEL } from "../config";
+import { CURL_PATH, DOWNLOADER } from "../config";
 
 const TEMP_DL_DIR = '/tmp/pacano-dl';
 
 const downloadFileAxios = async (url: string, downloadPath: string): Promise<void> => {
-    logger.verbose(`[axios] Downloading file from... ${url}`);
+    logger.verbose(`Downloading file using axios from: ${url}`);
     let fileWrite = fs.createWriteStream(downloadPath);
     return axios.get(url, { responseType: 'stream' }).then(response => {
         return new Promise((resolve, reject) => {
@@ -31,15 +31,12 @@ const downloadFileAxios = async (url: string, downloadPath: string): Promise<voi
 };
 
 const downloadFileCurl = async (url: string, downloadPath: string, download_size: number): Promise<void> => {
-    let args: string[] = ['--fail-with-body', '--location', '--speed-limit', '1024', '--speed-time', '10', '--connect-timeout', '2', '--max-time', '3600', '--output', downloadPath, url];
+    let args: string[] = ['--silent', '--fail-with-body', '--location', '--speed-limit', '1024', '--speed-time', '10', '--connect-timeout', '2', '--max-time', '3600', '--output', downloadPath, url];
     if (download_size > 0) {
         args.push('--max-filesize', `${download_size}`);
     }
-    if (!(LOG_LEVEL === 'verbose' || LOG_LEVEL === 'info')) {
-        args.push('--silent');
-    }
-    logger.verbose(`[curl] Downloading file from... ${url}`);
-    spawnSync('curl', args, { stdio: 'inherit' });
+    logger.verbose(`Downloading file using cURL from: ${url}`);
+    spawnSync(CURL_PATH, args, { stdio: 'inherit' });
     if (download_size > 0 && fs.statSync(downloadPath).size !== download_size) {
         logger.warn(`Downloaded file: ${url} size is not equal to expected size.`);
         throw new Error(`Downloaded file size is not equal to expected size.`);

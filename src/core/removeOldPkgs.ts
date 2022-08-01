@@ -17,17 +17,22 @@ const removeOldSingleRepo = async (repo: Model<any, any>): Promise<void> => {
     let allFilesDB: FileExistMap = {};
     let toRemove: string[] = [];
     _allFilesDB.forEach(element => allFilesDB[element] = true);
-    allFilesDisk = allFilesDisk.filter(value => !(value.endsWith('.db') || value.endsWith('.files') || value.endsWith('.sig')));
+    allFilesDisk = allFilesDisk.filter(value => !(value.endsWith('.db') || value.endsWith('.files')));
 
     allFilesDisk.forEach(element => {
-        if (!allFilesDB[element]) {
+        if (element.endsWith('.sig')) {
+            if (!allFilesDB[element.slice(0, -4)]) {
+                toRemove.push(element);
+            }
+        }
+        else if (!allFilesDB[element]) {
             toRemove.push(element);
         }
     });
+
     toRemove.forEach(element => {
         let loaclFilePath = path.join(MIRRORDIR, repo_name, element);
         fs.rmSync(loaclFilePath);
-        fs.rmSync(`${loaclFilePath}.sig`);
     });
 }
 

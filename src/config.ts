@@ -11,6 +11,7 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const UPSTREAM_MIRRORS = process.env.UPSTREAM_MIRRORS || 'mirrors.json';
 const FILES_FILE_SYNC_INTERVAL = process.env.FILES_FILE_SYNC_INTERVAL? parseInt(process.env.FILES_FILE_SYNC_INTERVAL) : 0;
 const DOWNLOADER = process.env.DOWNLOADER || 'curl';
+const CURL_PATH = process.env.CURL_PATH || 'curl';
 
 export {
     MIRRORDIR,
@@ -22,5 +23,6 @@ export {
     ADMIN_TOKEN,
     UPSTREAM_MIRRORS,
     FILES_FILE_SYNC_INTERVAL,
-    DOWNLOADER
+    DOWNLOADER,
+    CURL_PATH
 }
