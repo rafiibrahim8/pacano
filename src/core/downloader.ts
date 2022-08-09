@@ -3,6 +3,7 @@ import fs from "fs";
 import fs_extra from "fs-extra";
 import path from "path";
 import crypto from "crypto";
+import assert  from "assert";
 import logger from "../logger";
 import { spawnSync } from "child_process";
 import { CURL_PATH, DOWNLOADER } from "../config";
@@ -36,7 +37,8 @@ const downloadFileCurl = async (url: string, downloadPath: string, download_size
         args.push('--max-filesize', `${download_size}`);
     }
     logger.verbose(`Downloading file using cURL from: ${url}`);
-    spawnSync(CURL_PATH, args, { stdio: 'inherit' });
+    let status =  spawnSync(CURL_PATH, args, { stdio: 'inherit' }).status;
+    assert(status === 0, `Failed to download file from ${url}`);
     if (download_size > 0 && fs.statSync(downloadPath).size !== download_size) {
         logger.warn(`Downloaded file: ${url} size is not equal to expected size.`);
         fs.rmSync(downloadPath);
