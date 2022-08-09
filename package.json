@@ -1,6 +1,6 @@
 {
   "name": "pacano",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Tiny local Pacman mirror",
   "main": "src/index.ts",
   "scripts": {

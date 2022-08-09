@@ -39,6 +39,7 @@ const downloadFileCurl = async (url: string, downloadPath: string, download_size
     spawnSync(CURL_PATH, args, { stdio: 'inherit' });
     if (download_size > 0 && fs.statSync(downloadPath).size !== download_size) {
         logger.warn(`Downloaded file: ${url} size is not equal to expected size.`);
+        fs.rmSync(downloadPath);
         throw new Error(`Downloaded file size is not equal to expected size.`);
     }
 }

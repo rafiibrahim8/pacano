@@ -13,7 +13,7 @@ const start = async () => {
     app.listen(PORT, () => {
         logger.info(`Server started on port ${PORT}.`);
     });
-    //syncMain();
+    syncMain();
 };
 
 start();
