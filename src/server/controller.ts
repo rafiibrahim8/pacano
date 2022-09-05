@@ -6,6 +6,32 @@ import { UPSTREAM_MIRRORS } from "../config";
 const Packages = sequelize.models.Packages;
 const Repos = sequelize.models.Repos;
 
+const getAllPackages = async (req: express.Request, res: express.Response): Promise<void> => {
+    let packages_ = await Packages.findAll({ attributes: ['name'] });
+    let packages = packages_.map((p: any) => p.name);
+    res.json(packages);
+}
+
+const getPackages = async (req: express.Request, res: express.Response): Promise<void> => {
+    let repo = await Repos.findOne({ where: { name: req.params.repo } });
+    if (!repo) {
+        res.status(404).json({ msg: `Repo ${req.params.repo} not found` });
+        return;
+    }
+    let packages_ = await Packages.findAll({ where: { repo: req.params.repo }, attributes: ['name'] });
+    let packages = packages_.map((p: any) => p.name);
+    res.status(200).json(packages);
+};
+
+const getPackage = async (req: express.Request, res: express.Response): Promise<void> => {
+    let package_ = await Packages.findOne({ where: { name: req.params.package } });
+    if (package_) {
+        res.status(200).json(package_);
+        return;
+    }
+    res.status(404).json({ msg: `Package ${req.params.package} not found` });
+};
+
 const addPackage = async (req: express.Request, res: express.Response): Promise<void> => {
     if (!Array.isArray(req.body)) {
         res.status(400).json({ msg: "Body must be an array." });
@@ -16,7 +42,7 @@ const addPackage = async (req: express.Request, res: express.Response): Promise<
         await Packages.bulkCreate(req.body, { updateOnDuplicate: ['repo'], validate: true });
         res.status(200).json({ msg: 'Success' });
     } catch (err) {
-        res.status(403).json({ msg: `Bad request. Reason: ${err}`});
+        res.status(403).json({ msg: `Bad request. Reason: ${err}` });
     }
 };
 
@@ -32,6 +58,21 @@ const deletePackage = async (req: express.Request, res: express.Response): Promi
         res.status(404).json({ msg: 'Packages not found' });
     }
 };
+
+const getRepos = async (req: express.Request, res: express.Response): Promise<void> => {
+    let repos_ = await Repos.findAll({ attributes: ['name'] });
+    let repos = repos_.map((r: any) => r.name);
+    res.status(200).json(repos);
+};
+
+const getRepo = async (req: express.Request, res: express.Response): Promise<void> => {
+    let repo = await Repos.findOne({ where: { name: req.params.repo } });
+    if (repo) {
+        res.status(200).json(repo);
+        return;
+    }
+    res.status(404).json({ msg: `Repo ${req.params.repo} not found` });
+}
 
 const addRepo = async (req: express.Request, res: express.Response): Promise<void> => {
     if (!(req.body.name && req.body.mirror)) {
@@ -69,5 +110,14 @@ const deleteRepo = async (req: express.Request, res: express.Response): Promise<
     }
 };
 
-export { addPackage, deletePackage, addRepo, deleteRepo };
-
+export {
+    getAllPackages,
+    getPackage,
+    getPackages,
+    addPackage,
+    deletePackage,
+    addRepo,
+    deleteRepo,
+    getRepos,
+    getRepo
+};
