@@ -1,5 +1,6 @@
 import path from "path";
-import parseDB from "./parseDB";
+import axios from "axios";
+import parseDB, { PacmanDB } from "./parseDB";
 import { Model } from "sequelize";
 import { sequelize } from "../models";
 import { downloadFile } from "./downloader";
@@ -10,6 +11,47 @@ import fs from "fs";
 
 const Repos = sequelize.models.Repos;
 const Packages = sequelize.models.Packages;
+
+const resolveRepoChange = async (pkg_name: string): Promise<string | null> => {
+    return axios.get(`https://archlinux.org/packages/search/json/?name=${pkg_name}`).then(response => {
+        let pkg = response.data.results[0];
+        if (pkg) {
+            let repo = pkg.repo;
+            logger.info(`Package ${pkg_name} is now in repo ${repo}.`);
+            return repo;
+        } else {
+            logger.warn(`Can not find package ${pkg_name} on archlinux.org. It may be deleted.`);
+            return null;
+        }
+    }).catch(err => {
+        logger.error(`Failed to resolve repo change for package ${pkg_name}: ${err}`);
+        return null;
+    });
+};
+
+const checkSinglePakage = async (repoName:string, localDBElement:any, parsedDB:PacmanDB): Promise<any> => {
+    if (!parsedDB[localDBElement.name]) {
+        logger.warn(`Can not find package ${localDBElement.name} on repo ${repoName}. Trying to check if it is in a new repo...`);
+        let newRepo = await resolveRepoChange(localDBElement.name);
+        if (newRepo) {
+            localDBElement.repo = newRepo;
+        } else {
+            return null;
+        }
+    }
+    if (localDBElement.file_name !== parsedDB[localDBElement.name].file_name || localDBElement.repo !== repoName) {
+        return {
+            name: localDBElement.name,
+            repo: localDBElement.repo,
+            file_name: parsedDB[localDBElement.name].file_name,
+            download_size: parsedDB[localDBElement.name].download_size,
+            install_size: parsedDB[localDBElement.name].install_size,
+            version: parsedDB[localDBElement.name].version,
+            times_updated: localDBElement.times_updated + 1
+        };
+    }
+    return null;
+};
 
 const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
     let repoDbPath = path.join(MIRRORDIR, repo_name, `${repo_name}.db`);
@@ -23,27 +65,20 @@ const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
         }
     });
     return parseDB(repoDbPath).then(parsedDB => {
-        let toBeUpdated: any[] = [];
+        let resultPromises: Promise<any>[] = [];
         allRepoPkgs.forEach(element => {
-            if (!parsedDB[element.name]) {
-                logger.warn(`Can not find package ${element.name} on repo ${repo_name}`);
-                return;
-            }
-            if (element.file_name !== parsedDB[element.name].file_name) {
-                toBeUpdated.push({
-                    name: element.name,
-                    repo: element.repo,
-                    file_name: parsedDB[element.name].file_name,
-                    download_size: parsedDB[element.name].download_size,
-                    install_size: parsedDB[element.name].install_size,
-                    version: parsedDB[element.name].version,
-                    times_updated: element.times_updated + 1
-                });
-            }
+            let resultPromise = checkSinglePakage(repo_name, element, parsedDB);
+            resultPromises.push(resultPromise);
         });
-        return Packages.bulkCreate(toBeUpdated, {
-            updateOnDuplicate: ['file_name', 'version', 'times_updated', 'download_size', 'install_size'],
-            validate: true
+        return Promise.all(resultPromises).then(results => {
+            return results.filter(value => value !== null);
+        }).then(results => {
+            return Packages.bulkCreate(results, {
+                updateOnDuplicate: ['repo', 'file_name', 'version', 'times_updated', 'download_size', 'install_size'],
+                validate: true
+            });
+        }).catch(err => {
+            logger.error(`An unexpected error occurred while syncing local DB for repo ${repo_name}: ${err}`);
         }).then();
     });
 }

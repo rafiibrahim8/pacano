@@ -12,7 +12,7 @@ export interface PackageDetails {
     install_size: number
 }
 
-interface PacmanDB {
+export interface PacmanDB {
     [key: string]: PackageDetails
 }
 

@@ -10,6 +10,12 @@ import { CURL_PATH, DOWNLOADER } from "../config";
 
 const TEMP_DL_DIR = '/tmp/pacano-dl';
 
+const removeFileIfExist = (filePath: string): void => {
+    if(fs.existsSync(filePath)) {
+        fs.rmSync(filePath);
+    }
+};
+
 const downloadFileAxios = async (url: string, downloadPath: string): Promise<void> => {
     logger.verbose(`Downloading file using axios from: ${url}`);
     let fileWrite = fs.createWriteStream(downloadPath);
@@ -41,7 +47,6 @@ const downloadFileCurl = async (url: string, downloadPath: string, download_size
     assert(status === 0, `Failed to download file from ${url}`);
     if (download_size > 0 && fs.statSync(downloadPath).size !== download_size) {
         logger.warn(`Downloaded file: ${url} size is not equal to expected size.`);
-        fs.rmSync(downloadPath);
         throw new Error(`Downloaded file size is not equal to expected size.`);
     }
 }
@@ -52,11 +57,17 @@ const downloadFile = async (url: string, downloadPath: string, download_size: nu
     if (DOWNLOADER.toLocaleLowerCase() === 'axios') {
         return downloadFileAxios(url, tempFile).then(_ => {
             return fs_extra.move(tempFile, downloadPath, { overwrite: true });
+        }).catch(err => {
+            removeFileIfExist(tempFile);
+            throw err;
         });
     }
     else {
         return downloadFileCurl(url, tempFile, download_size).then(_ => {
             return fs_extra.move(tempFile, downloadPath, { overwrite: true });
+        }).catch(err => {
+            removeFileIfExist(tempFile);
+            throw err;
         });
     }
 }

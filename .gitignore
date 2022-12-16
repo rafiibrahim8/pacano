@@ -1,3 +1,4 @@
+dist
 node_modules
 pacano.log.txt
 database.sqlite
