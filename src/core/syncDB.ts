@@ -12,13 +12,21 @@ import fs from "fs";
 const Repos = sequelize.models.Repos;
 const Packages = sequelize.models.Packages;
 
-const resolveRepoChange = async (pkg_name: string): Promise<string | null> => {
+const resolveRepoChange = async (pkg_name: string, times_updated: number): Promise<any> => {
     return axios.get(`https://archlinux.org/packages/search/json/?name=${pkg_name}`).then(response => {
         let pkg = response.data.results[0];
         if (pkg) {
             let repo = pkg.repo;
             logger.info(`Package ${pkg_name} is now in repo ${repo}.`);
-            return repo;
+            return {
+                name: pkg_name,
+                repo: repo,
+                file_name: pkg.filename,
+                download_size: pkg.compressed_size,
+                install_size: pkg.installed_size,
+                version: pkg.pkgver,
+                times_updated: times_updated + 1
+            };
         } else {
             logger.warn(`Can not find package ${pkg_name} on archlinux.org. It may be deleted.`);
             return null;
@@ -32,14 +40,10 @@ const resolveRepoChange = async (pkg_name: string): Promise<string | null> => {
 const checkSinglePakage = async (repoName:string, localDBElement:any, parsedDB:PacmanDB): Promise<any> => {
     if (!parsedDB[localDBElement.name]) {
         logger.warn(`Can not find package ${localDBElement.name} on repo ${repoName}. Trying to check if it is in a new repo...`);
-        let newRepo = await resolveRepoChange(localDBElement.name);
-        if (newRepo) {
-            localDBElement.repo = newRepo;
-        } else {
-            return null;
-        }
+        let newDetails = await resolveRepoChange(localDBElement.name, localDBElement.times_updated);
+        return newDetails;
     }
-    if (localDBElement.file_name !== parsedDB[localDBElement.name].file_name || localDBElement.repo !== repoName) {
+    if (localDBElement.file_name !== parsedDB[localDBElement.name].file_name) {
         return {
             name: localDBElement.name,
             repo: localDBElement.repo,

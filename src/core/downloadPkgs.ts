@@ -42,7 +42,7 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
             continue;
         }
         if (! await downloadSinglePackage(repo_name, use_mirror, i.file_name, i.download_size)) {
-            logger.warn(`Can not download file ${i} of repo ${repo_name}`);
+            logger.warn(`Can not download file ${i.file_name} of repo ${repo_name}`);
         }
     }
 }
