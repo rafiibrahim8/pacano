@@ -29,7 +29,7 @@
     "dotenv": "^16.0.1",
     "express": "^4.18.2",
     "fs-extra": "^10.1.0",
-    "sequelize": "^6.30.0",
+    "sequelize": "^6.31.0",
     "sqlite3": "^5.1.5",
     "ts-node": "^10.7.0",
     "winston": "^3.8.1"
