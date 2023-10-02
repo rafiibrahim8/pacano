@@ -5,12 +5,17 @@ import { Model } from "sequelize";
 import { sequelize } from "../models";
 import { downloadFile } from "./downloader";
 import { getMirrors, getEtagAndLastModified, EtagLastMod, getValue, setValue } from "./utils";
-import { MIRRORDIR, FILES_FILE_SYNC_INTERVAL } from "../config";
+import { MIRRORDIR, FILES_FILE_SYNC_INTERVAL, REMOVE_IF_PACKAGE_NOT_FOUND } from "../config";
 import logger from "../logger";
 import fs from "fs";
 
 const Repos = sequelize.models.Repos;
 const Packages = sequelize.models.Packages;
+
+enum PackageStatus {
+    UPDATE = 'update',
+    DELETE = 'delete'
+}
 
 const resolveRepoChange = async (pkg_name: string, times_updated: number): Promise<any> => {
     return axios.get(`https://archlinux.org/packages/search/json/?name=${pkg_name}`).then(response => {
@@ -18,7 +23,7 @@ const resolveRepoChange = async (pkg_name: string, times_updated: number): Promi
         if (pkg) {
             let repo = pkg.repo;
             logger.info(`Package ${pkg_name} is now in repo ${repo}.`);
-            return {
+            return {type: PackageStatus.UPDATE, data:{
                 name: pkg_name,
                 repo: repo,
                 file_name: pkg.filename,
@@ -26,8 +31,14 @@ const resolveRepoChange = async (pkg_name: string, times_updated: number): Promi
                 install_size: pkg.installed_size,
                 version: pkg.pkgver,
                 times_updated: times_updated + 1
-            };
+            }};
         } else {
+            if(REMOVE_IF_PACKAGE_NOT_FOUND){
+                logger.warn(`Package ${pkg_name} is not found on archlinux.org. Deleting from local DB...`);
+                return {type: PackageStatus.DELETE, data:{
+                    name: pkg_name,
+                }};
+            }
             logger.warn(`Can not find package ${pkg_name} on archlinux.org. It may be deleted.`);
             return null;
         }
@@ -77,10 +88,18 @@ const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
         return Promise.all(resultPromises).then(results => {
             return results.filter(value => value !== null);
         }).then(results => {
-            return Packages.bulkCreate(results, {
+            const toDelete = results.filter(value => value.type === PackageStatus.DELETE).map(value => value.data.name);
+            const toUpdate = results.filter(value => value.type === PackageStatus.UPDATE).map(value => value.data);
+
+            const modifyPromises: Promise<any>[] = [];
+
+            modifyPromises.push(Packages.destroy({ where: { name: toDelete } }));
+            modifyPromises.push(Packages.bulkCreate(toUpdate, {
                 updateOnDuplicate: ['repo', 'file_name', 'version', 'times_updated', 'download_size', 'install_size'],
                 validate: true
-            });
+            }));
+
+            return Promise.all(modifyPromises);
         }).catch(err => {
             logger.error(`An unexpected error occurred while syncing local DB for repo ${repo_name}: ${err}`);
         }).then();
