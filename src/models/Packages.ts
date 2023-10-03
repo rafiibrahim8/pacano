@@ -28,6 +28,12 @@ const Packages = (sequelize: Sequelize): void => {
         install_size: {
             type: DataTypes.INTEGER,
         },
+        md5sum: {
+            type: DataTypes.STRING,
+        },
+        sha256sum: {
+            type: DataTypes.STRING,
+        },
         times_updated: {
             type: DataTypes.INTEGER,
             defaultValue: 0

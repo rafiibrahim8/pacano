@@ -71,15 +71,17 @@ const checkSinglePakage = async (repoName:string, localDBElement:any, parsedDB:P
         return newDetails;
     }
     if (localDBElement.file_name !== parsedDB[localDBElement.name].file_name) {
-        return {
+        return {type: PackageStatus.UPDATE, data: {
             name: localDBElement.name,
             repo: localDBElement.repo,
             file_name: parsedDB[localDBElement.name].file_name,
             download_size: parsedDB[localDBElement.name].download_size,
             install_size: parsedDB[localDBElement.name].install_size,
             version: parsedDB[localDBElement.name].version,
+            md5sum: parsedDB[localDBElement.name].md5sum,
+            sha256sum: parsedDB[localDBElement.name].sha256sum,
             times_updated: localDBElement.times_updated + 1
-        };
+        }};
     }
     return null;
 };
@@ -111,7 +113,7 @@ const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
 
             modifyPromises.push(Packages.destroy({ where: { name: toDelete } }));
             modifyPromises.push(Packages.bulkCreate(toUpdate, {
-                updateOnDuplicate: ['repo', 'file_name', 'version', 'times_updated', 'download_size', 'install_size'],
+                updateOnDuplicate: ['repo', 'file_name', 'version', 'times_updated', 'download_size', 'install_size', 'md5sum', 'sha256sum'],
                 validate: true
             }));
 

@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import { Model } from "sequelize";
 import { sequelize } from "../models";
-import { downloadFile } from "./downloader";
+import { downloadFile, Checksums } from "./downloader";
 import { getMirrors, FileExistMap } from "./utils";
 import { MIRRORDIR } from "../config";
 import logger from "../logger";
@@ -10,14 +10,14 @@ import logger from "../logger";
 const Repos = sequelize.models.Repos;
 const Packages = sequelize.models.Packages;
 
-const downloadSinglePackage = async (repo_name: string, use_mirror: string, file_name: string, download_size: number): Promise<boolean> => {
+const downloadSinglePackage = async (repo_name: string, use_mirror: string, file_name: string, download_size: number, checksums: Checksums = undefined): Promise<boolean> => {
     let urls = getMirrors(use_mirror, repo_name, 'package');
     for (let url of urls) {
         url = `${url}/${file_name}`;
         let loaclFilePath = path.join(MIRRORDIR, repo_name, file_name);
         try {
             await downloadFile(`${url}.sig`, `${loaclFilePath}.sig`); // Download `.sig` frist. Reson: issue #1
-            await downloadFile(url, loaclFilePath, download_size);
+            await downloadFile(url, loaclFilePath, download_size, checksums);
             return true;
         } catch { };
     }
@@ -31,7 +31,9 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
     let allFilesDB = _allRepoPkgs.map(value => {
         return {
             file_name: value.get('file_name') as string,
-            download_size: value.get('download_size') as number
+            download_size: value.get('download_size') as number,
+            md5sum: value.get('md5sum') as (string | undefined),
+            sha256sum: value.get('sha256sum') as (string | undefined)
         };
     });
     let _allFilesDisk = fs.readdirSync(path.join(MIRRORDIR, repo_name));
@@ -41,7 +43,7 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
         if (allFilesDisk[i.file_name]) {
             continue;
         }
-        if (! await downloadSinglePackage(repo_name, use_mirror, i.file_name, i.download_size)) {
+        if (! await downloadSinglePackage(repo_name, use_mirror, i.file_name, i.download_size, { md5sum: i.md5sum, sha256sum: i.sha256sum })) {
             logger.warn(`Can not download file ${i.file_name} of repo ${repo_name}`);
         }
     }

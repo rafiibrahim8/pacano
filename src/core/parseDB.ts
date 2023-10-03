@@ -3,13 +3,16 @@ import path from "path";
 import fs from "fs";
 import { downloadFile } from "./downloader";
 import { TEMP_DIRECTORY } from "../config";
+import logger from "../logger";
 
 export interface PackageDetails {
     name: string,
     version: string,
     file_name: string,
     download_size: number,
-    install_size: number
+    md5sum: string | undefined,
+    sha256sum: string | undefined,
+    install_size: number,
 }
 
 export interface PacmanDB {
@@ -24,7 +27,9 @@ const parsePackageDesc = async (descPath: fs.PathLike): Promise<PackageDetails> 
         let file_name = Array.from(descFile.matchAll(/%FILENAME%\n([^\n]+)/g))[0][1];
         let download_size = parseInt(Array.from(descFile.matchAll(/%CSIZE%\n([^\n]+)/g))[0][1]);
         let install_size = parseInt(Array.from(descFile.matchAll(/%ISIZE%\n([^\n]+)/g))[0][1]);
-        return { name, file_name, version, download_size, install_size };
+        let md5sum = Array.from(descFile.matchAll(/%MD5SUM%\n([^\n]+)/g))[0][1];
+        let sha256sum = Array.from(descFile.matchAll(/%SHA256SUM%\n([^\n]+)/g))[0][1];
+        return { name, file_name, version, download_size, install_size, md5sum, sha256sum };
     });
 };
 
@@ -47,6 +52,9 @@ const parseLocalDB = async (dbPath: string): Promise<PacmanDB> => {
         let fulfilled = values.filter((value) => value.status === 'fulfilled') as PromiseFulfilledResult<PackageDetails>[];
         let results: PackageDetails[] = fulfilled.map(value => value.value);
         let rejected = values.filter((value) => value.status === 'rejected') as PromiseRejectedResult[];
+        if (rejected.length > 0) {
+            logger.warn(`An error occurred while parsing local DB`);
+        }
 
         let parsedDB: PacmanDB = {};
 
