@@ -14,8 +14,6 @@ Packages(sequelize);
 Repos(sequelize);
 KeyValuePairs(sequelize);
 
-sequelize.sync();
-
 const hasConnection = async (): Promise<boolean> => {
     return sequelize.authenticate().then(_ => {
         return true;
