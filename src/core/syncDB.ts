@@ -17,31 +17,47 @@ enum PackageStatus {
     DELETE = 'delete'
 }
 
+const checkIfFound = async (pkg: any): Promise<[boolean, boolean]> => {
+    if(!pkg){
+        return [false, false];
+    }
+    return Repos.findOne({ where: { name: pkg.repo } }).then(repo => {
+        if (!repo) {
+            return [true, false];
+        }
+        return [true, true];
+    });
+}
+
 const resolveRepoChange = async (pkg_name: string, times_updated: number): Promise<any> => {
     return axios.get(`https://archlinux.org/packages/search/json/?name=${pkg_name}`).then(response => {
         let pkg = response.data.results[0];
-        if (pkg) {
-            let repo = pkg.repo;
-            logger.info(`Package ${pkg_name} is now in repo ${repo}.`);
-            return {type: PackageStatus.UPDATE, data:{
-                name: pkg_name,
-                repo: repo,
-                file_name: pkg.filename,
-                download_size: pkg.compressed_size,
-                install_size: pkg.installed_size,
-                version: pkg.pkgver,
-                times_updated: times_updated + 1
-            }};
-        } else {
-            if(REMOVE_IF_PACKAGE_NOT_FOUND){
-                logger.warn(`Package ${pkg_name} is not found on archlinux.org. Deleting from local DB...`);
-                return {type: PackageStatus.DELETE, data:{
+        return checkIfFound(pkg).then(([found, isRepoTracking]) => {
+            if (found && isRepoTracking) {
+                logger.info(`Package ${pkg_name} is now in repo ${pkg.repo}. Updating...`);
+                return {type: PackageStatus.UPDATE, data:{
                     name: pkg_name,
+                    repo: pkg.repo,
+                    file_name: pkg.filename,
+                    download_size: pkg.compressed_size,
+                    install_size: pkg.installed_size,
+                    version: pkg.pkgver,
+                    times_updated: times_updated + 1
                 }};
+            } else if(found && REMOVE_IF_PACKAGE_NOT_FOUND) {
+                logger.warn(`Package ${pkg_name} is now in repo ${pkg.repo}, but it is not tracked by pacano. Removing...`);
+                return {type: PackageStatus.DELETE, data: {name: pkg_name}};
+            } else if (!found && REMOVE_IF_PACKAGE_NOT_FOUND) {
+                logger.warn(`Package ${pkg_name} is not found on any repo. Removing...`);
+                return {type: PackageStatus.DELETE, data: {name: pkg_name}};
+            } else if (found) {
+                logger.warn(`Package ${pkg_name} is now in repo ${pkg.repo}, but it is not tracked by pacano. Skipping...`);
+                return null;
+            } else {
+                logger.warn(`Package ${pkg_name} is not found on any repo. Skipping...`);
+                return null;
             }
-            logger.warn(`Can not find package ${pkg_name} on archlinux.org. It may be deleted.`);
-            return null;
-        }
+        });
     }).catch(err => {
         logger.error(`Failed to resolve repo change for package ${pkg_name}: ${err}`);
         return null;
