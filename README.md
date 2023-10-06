@@ -16,7 +16,8 @@ pacano (pacman+nano) is a mirroring tool for Arch Linux repositories. But instea
     ```
 4. Create a `.env` file add add your configurations (see `.env.example` and [Environment Variables](#environment-variables))
 5. Run `npm install`
-6. Run `npm start`
+6. Run `npm run build`
+7. Run `npm start`
 
 Repositories should be mirrored in `MIRRORDIR` directory of your environment variable. Server a static server from the directory (e.g.: [Using nginx](https://docs.nginx.com/nginx/admin-guide/web-server/serving-static-content/)).
 

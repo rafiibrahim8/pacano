@@ -17,6 +17,16 @@ enum PackageStatus {
     DELETE = 'delete'
 }
 
+const checkIfNeedsUpdate = async (localDBElement: any, parsedDBElement: any): Promise<[boolean, number]> => {
+    if (localDBElement.file_name !== parsedDBElement.file_name) {
+        return [true, 1];
+    }
+    if (!localDBElement.sha256sum && parsedDBElement.sha256sum) {
+        return [true, 0];
+    }
+    return [false, 0];
+}
+
 const checkIfFound = async (pkg: any): Promise<[boolean, boolean]> => {
     if(!pkg){
         return [false, false];
@@ -70,7 +80,8 @@ const checkSinglePakage = async (repoName:string, localDBElement:any, parsedDB:P
         let newDetails = await resolveRepoChange(localDBElement.name, localDBElement.times_updated);
         return newDetails;
     }
-    if (localDBElement.file_name !== parsedDB[localDBElement.name].file_name) {
+    const [NeedsUpdate, count] = await checkIfNeedsUpdate(localDBElement, parsedDB[localDBElement.name]);
+    if (NeedsUpdate) {
         return {type: PackageStatus.UPDATE, data: {
             name: localDBElement.name,
             repo: localDBElement.repo,
@@ -80,7 +91,7 @@ const checkSinglePakage = async (repoName:string, localDBElement:any, parsedDB:P
             version: parsedDB[localDBElement.name].version,
             md5sum: parsedDB[localDBElement.name].md5sum,
             sha256sum: parsedDB[localDBElement.name].sha256sum,
-            times_updated: localDBElement.times_updated + 1
+            times_updated: localDBElement.times_updated + count
         }};
     }
     return null;
@@ -94,7 +105,9 @@ const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
             name: value.get('name') as string,
             repo: value.get('repo') as string,
             file_name: value.get('file_name') as string,
-            times_updated: value.get('times_updated') as number
+            times_updated: value.get('times_updated') as number,
+            md5sum: value.get('md5sum') as (string | undefined),
+            sha256sum: value.get('sha256sum') as (string | undefined)
         }
     });
     return parseDB(repoDbPath).then(parsedDB => {
