@@ -1,17 +1,15 @@
 import path from 'path';
 import fs from 'fs';
 import { Model } from 'sequelize';
-import { sequelize } from '../models';
-import { FileExistMap } from './utils';
 import { MIRRORDIR } from '../config';
 import logger from '../logger';
-
-const Repos = sequelize.models.Repos;
-const Packages = sequelize.models.Packages;
+import { PackageModel } from '../models/packageModel';
+import { RepoModel } from '../models/repoModel';
+import { FileExistMap } from '../types';
 
 const removeOldSingleRepo = async (repo: Model<any, any>): Promise<void> => {
   const repo_name = repo.get('name') as string;
-  const _allRepoPkgs = await Packages.findAll({ where: { repo: repo_name } });
+  const _allRepoPkgs = await PackageModel.findAll({ where: { repo: repo_name } });
   const _allFilesDB = _allRepoPkgs.map(
     (value) => value.get('file_name') as string,
   );
@@ -40,7 +38,7 @@ const removeOldSingleRepo = async (repo: Model<any, any>): Promise<void> => {
 };
 
 const removeOldPkgs = async (): Promise<void> => {
-  const repos = await Repos.findAll();
+  const repos = await RepoModel.findAll();
   const promiseArray: Promise<void>[] = [];
   repos.forEach((value) => {
     promiseArray.push(removeOldSingleRepo(value));
