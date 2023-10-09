@@ -9,7 +9,9 @@ pacano (pacman+nano) is a mirroring tool for Arch Linux repositories. But instea
 # GETTING STARTED
 ## Configuring Server
 1. Install NodeJS (>=16.0.0)
-2. Install `bsdtar` command 
+2. Install `bsdtar` command
+    - Arch Linux: `pacman -S libarchive`
+    - Debian/Ubuntu: `apt install bsdtar`
 3. Clone the repo
     ```
     git clone https://github.com/rafiibrahim8/pacano.git && cd pacano
