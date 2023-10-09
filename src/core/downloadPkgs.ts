@@ -5,6 +5,9 @@ import { downloadFile, Checksums } from './downloader';
 import { getMirrors } from './utils';
 import { MIRRORDIR } from '../config';
 import logger from '../logger';
+import { PackageModel } from '../models/packageModel';
+import { RepoModel } from '../models/repoModel';
+import { FileExistMap } from '../types';
 
 const downloadSinglePackage = async (
   repo_name: string,
@@ -29,7 +32,7 @@ const downloadSinglePackage = async (
 const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
   const use_mirror = repo.get('use_mirror') as string;
   const repo_name = repo.get('name') as string;
-  const _allRepoPkgs = await Packages.findAll({ where: { repo: repo_name } });
+  const _allRepoPkgs = await PackageModel.findAll({ where: { repo: repo_name } });
   const allFilesDB = _allRepoPkgs.map((value) => {
     return {
       file_name: value.get('file_name') as string,
@@ -60,7 +63,7 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
 };
 
 const downloadPkgs = async (): Promise<void> => {
-  const repos = await Repos.findAll();
+  const repos = await RepoModel.findAll();
   for (const repo of repos) {
     try {
       await downloadSingleRepo(repo);

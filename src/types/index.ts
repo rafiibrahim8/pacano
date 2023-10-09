@@ -50,3 +50,7 @@ export interface RemotePackage {
   compressed_size: number;
   installed_size: number;
 }
+
+export interface FileExistMap {
+  [key: string]: boolean;
+}
