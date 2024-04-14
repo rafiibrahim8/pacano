@@ -1,20 +1,19 @@
-import { Sequelize, DataTypes } from "sequelize";
+import { Sequelize, DataTypes } from 'sequelize';
 
 const Packages = (sequelize: Sequelize): void => {
     sequelize.define('Packages', {
         name: {
             type: DataTypes.STRING,
             allowNull: false,
-            primaryKey: true
+            primaryKey: true,
         },
         repo: {
             type: DataTypes.STRING,
             allowNull: false,
             references: {
                 model: 'Repos',
-                key: 'name'
-            }
-
+                key: 'name',
+            },
         },
         file_name: {
             type: DataTypes.STRING,
@@ -36,9 +35,9 @@ const Packages = (sequelize: Sequelize): void => {
         },
         times_updated: {
             type: DataTypes.INTEGER,
-            defaultValue: 0
-        }
+            defaultValue: 0,
+        },
     });
-}
+};
 
 export default Packages;
