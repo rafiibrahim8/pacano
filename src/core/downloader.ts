@@ -145,6 +145,7 @@ const downloadFile = async (
         })
         .catch((err) => {
             removeFileIfExist(tempFile);
+            logger.error(`Downloading failed with error: ${err}`)
             throw err;
         });
 };
