@@ -18,9 +18,9 @@ const timestampFormat = (color = false): winston.Logform.Format => {
 
 const logMsgFormat = (): winston.Logform.Format => {
     return winston.format(function (info: winston.Logform.TransformableInfo) {
-        info.message = JSON.stringify(info.message);
-        if (info.message.startsWith('"') && info.message.endsWith('"')) {
-            info.message = info.message.slice(1, -1);
+        const message = JSON.stringify(info.message);
+        if (message.startsWith('"') && message.endsWith('"')) {
+            info.message = message.slice(1, -1);
         }
         return info;
     })();
