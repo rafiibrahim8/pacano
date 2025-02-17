@@ -2,7 +2,7 @@
   "name": "pacano",
   "version": "0.1.1",
   "description": "Tiny local Pacman mirror",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon src/index.ts",
