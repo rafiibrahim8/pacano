@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+import path from 'path';
+
 dotenv.config();
 
 const TEMP_DIRECTORY = process.env.TEMP_DIRECTORY || '/tmp/pacano';
@@ -19,8 +21,13 @@ const CURL_PATH = process.env.CURL_PATH || 'curl';
 const REMOVE_IF_PACKAGE_NOT_FOUND =
     parseInt(process.env.REMOVE_IF_PACKAGE_NOT_FOUND || '0') === 1;
 
+const TEMP_DIRECTORY_DB = path.join(TEMP_DIRECTORY, 'db');
+const TEMP_DIRECTORY_DL = path.join(TEMP_DIRECTORY, 'dl');
+
 export {
     MIRRORDIR,
+    TEMP_DIRECTORY_DB,
+    TEMP_DIRECTORY_DL,
     TEMP_DIRECTORY,
     LOG_LEVEL,
     LOG_FILENAME,

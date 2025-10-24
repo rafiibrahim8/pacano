@@ -2,7 +2,7 @@ import child_process from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { downloadFile } from './downloader';
-import { TEMP_DIRECTORY } from '../config';
+import { TEMP_DIRECTORY_DB } from '../config';
 import logger from '../logger';
 import { spawnPromiseStrict } from '../utils';
 
@@ -54,7 +54,7 @@ const parsePackageDesc = async (
 
 const parseLocalDB = async (dbPath: string): Promise<PacmanDB> => {
     const extractDir = path.join(
-        TEMP_DIRECTORY,
+        TEMP_DIRECTORY_DB,
         path.basename(dbPath).slice(0, -3),
     );
     await fs.promises.rm(extractDir, { recursive: true, force: true });
@@ -94,13 +94,13 @@ const parseLocalDB = async (dbPath: string): Promise<PacmanDB> => {
 };
 
 const parseDB = async (dbURI: string): Promise<PacmanDB> => {
-    await fs.promises.mkdir(TEMP_DIRECTORY, { recursive: true });
+    await fs.promises.mkdir(TEMP_DIRECTORY_DB, { recursive: true });
     const isURL = dbURI.startsWith('http://') || dbURI.startsWith('https://');
     if (!isURL) {
         return parseLocalDB(dbURI);
     }
 
-    const dbPath = path.join(TEMP_DIRECTORY, path.basename(dbURI));
+    const dbPath = path.join(TEMP_DIRECTORY_DB, path.basename(dbURI));
     await downloadFile(dbURI, dbPath);
     const parsedDB = await parseLocalDB(dbPath);
     await fs.promises.rm(dbPath);

@@ -4,10 +4,8 @@ import fs_extra from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import logger from '../logger';
-import { CURL_PATH, DOWNLOADER } from '../config';
+import { CURL_PATH, DOWNLOADER, TEMP_DIRECTORY_DL } from '../config';
 import { spawnPromise, spawnPromiseStrict } from '../utils';
-
-const TEMP_DL_DIR = '/tmp/pacano-dl';
 
 type Checksums =
     | {
@@ -142,9 +140,9 @@ const downloadFile = async (
     download_size: number = 0,
     checksums: Checksums = undefined,
 ): Promise<void> => {
-    await fs.promises.mkdir(TEMP_DL_DIR, { recursive: true });
+    await fs.promises.mkdir(TEMP_DIRECTORY_DL, { recursive: true });
     const tempFile = path.join(
-        TEMP_DL_DIR,
+        TEMP_DIRECTORY_DL,
         crypto.randomBytes(32).toString('hex'),
     );
     const downloaderFunc =

@@ -3,7 +3,7 @@ import fs from 'fs';
 import { Model } from 'sequelize';
 import { sequelize } from '../models';
 import { FileExistMap } from './utils';
-import { MIRRORDIR } from '../config';
+import { MIRRORDIR, TEMP_DIRECTORY } from '../config';
 import logger from '../logger';
 
 const Repos = sequelize.models.Repos;
@@ -49,7 +49,7 @@ const removeOldPkgs = async (): Promise<void> => {
     repos.forEach((value) => {
         promiseArray.push(removeOldSingleRepo(value));
     });
-    return Promise.allSettled(promiseArray).then((values) => {
+    await Promise.allSettled(promiseArray).then((values) => {
         //let fulfilled = values.filter((value) => value.status === 'fulfilled') as PromiseFulfilledResult<void>[];
         let rejected = values.filter(
             (value) => value.status === 'rejected',
@@ -58,6 +58,7 @@ const removeOldPkgs = async (): Promise<void> => {
             logger.error('Failed to remove some old packages');
         }
     });
+    await fs.promises.rm(TEMP_DIRECTORY, { recursive: true, force: true });
 };
 
 export default removeOldPkgs;
