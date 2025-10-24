@@ -112,7 +112,7 @@ const addRepo = async (
         return;
     }
     try {
-        getMirrors(req.body.mirror, req.body.repo);
+        await getMirrors(req.body.mirror, req.body.repo);
     } catch {
         res.status(403).json({
             msg: `mirror ${req.body.mirror} not found in ${UPSTREAM_MIRRORS}`,

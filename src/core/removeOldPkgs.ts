@@ -15,7 +15,9 @@ const removeOldSingleRepo = async (repo: Model<any, any>): Promise<void> => {
     let _allFilesDB = _allRepoPkgs.map(
         (value) => value.get('file_name') as string,
     );
-    let allFilesDisk = fs.readdirSync(path.join(MIRRORDIR, repo_name));
+    let allFilesDisk = await fs.promises.readdir(
+        path.join(MIRRORDIR, repo_name),
+    );
     let allFilesDB: FileExistMap = {};
     let toRemove: string[] = [];
     _allFilesDB.forEach((element) => (allFilesDB[element] = true));
@@ -33,10 +35,12 @@ const removeOldSingleRepo = async (repo: Model<any, any>): Promise<void> => {
         }
     });
 
-    toRemove.forEach((element) => {
-        let loaclFilePath = path.join(MIRRORDIR, repo_name, element);
-        fs.rmSync(loaclFilePath);
-    });
+    await Promise.all(
+        toRemove.map((element) => {
+            const localFilePath = path.join(MIRRORDIR, repo_name, element);
+            return fs.promises.rm(localFilePath, { force: true });
+        }),
+    );
 };
 
 const removeOldPkgs = async (): Promise<void> => {

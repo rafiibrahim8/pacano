@@ -18,6 +18,7 @@ import {
 } from '../config';
 import logger from '../logger';
 import fs from 'fs';
+import { isExistPath } from '../utils';
 
 const Repos = sequelize.models.Repos;
 const Packages = sequelize.models.Packages;
@@ -220,7 +221,7 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
     let repo_name = repo.get('name') as string;
     let etag = repo.get('etag') as string;
     let last_modified = repo.get('last_modified') as string;
-    let urls = getMirrors(use_mirror, repo_name, 'db');
+    let urls = await getMirrors(use_mirror, repo_name, 'db');
     let etag_lastmod: EtagLastMod;
     let repoLocalDir = path.join(MIRRORDIR, repo_name);
     let localDBPath = path.join(MIRRORDIR, repo_name, `${repo_name}.db`);
@@ -230,17 +231,15 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
         `${repo_name}.files`,
     );
 
-    if (!fs.existsSync(repoLocalDir)) {
-        fs.mkdirSync(repoLocalDir, { recursive: true });
-    }
+    await fs.promises.mkdir(repoLocalDir, { recursive: true });
 
     for (let url of urls) {
         try {
             url = `${url}/${repo_name}.db`;
             etag_lastmod = await getEtagAndLastModified(url);
             if (
-                fs.existsSync(localDBPath) &&
-                fs.existsSync(localFilesFilePath) &&
+                (await isExistPath(localDBPath)) &&
+                (await isExistPath(localFilesFilePath)) &&
                 ((etag && etag === etag_lastmod.etag) ||
                     (last_modified &&
                         last_modified === etag_lastmod.last_modified))

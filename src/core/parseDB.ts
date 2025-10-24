@@ -4,6 +4,7 @@ import fs from 'fs';
 import { downloadFile } from './downloader';
 import { TEMP_DIRECTORY } from '../config';
 import logger from '../logger';
+import { spawnPromiseStrict } from '../utils';
 
 export interface PackageDetails {
     name: string;
@@ -22,98 +23,88 @@ export interface PacmanDB {
 const parsePackageDesc = async (
     descPath: fs.PathLike,
 ): Promise<PackageDetails> => {
-    return Promise.resolve().then((_) => {
-        let descFile = fs.readFileSync(descPath, { encoding: 'utf-8' });
-        let name = Array.from(descFile.matchAll(/%NAME%\n([^\n]+)/g))[0][1];
-        let version = Array.from(
-            descFile.matchAll(/%VERSION%\n([^\n]+)/g),
-        )[0][1];
-        let file_name = Array.from(
-            descFile.matchAll(/%FILENAME%\n([^\n]+)/g),
-        )[0][1];
-        let download_size = parseInt(
-            Array.from(descFile.matchAll(/%CSIZE%\n([^\n]+)/g))[0][1],
-        );
-        let install_size = parseInt(
-            Array.from(descFile.matchAll(/%ISIZE%\n([^\n]+)/g))[0][1],
-        );
-        let md5sum = Array.from(
-            descFile.matchAll(/%MD5SUM%\n([^\n]+)/g),
-        )[0]?.[1];
-        let sha256sum = Array.from(
-            descFile.matchAll(/%SHA256SUM%\n([^\n]+)/g),
-        )[0]?.[1];
-        return {
-            name,
-            file_name,
-            version,
-            download_size,
-            install_size,
-            md5sum,
-            sha256sum,
-        };
+    const descFile = await fs.promises.readFile(descPath, {
+        encoding: 'utf-8',
     });
+    const name = Array.from(descFile.matchAll(/%NAME%\n([^\n]+)/g))[0][1];
+    const version = Array.from(descFile.matchAll(/%VERSION%\n([^\n]+)/g))[0][1];
+    const file_name = Array.from(
+        descFile.matchAll(/%FILENAME%\n([^\n]+)/g),
+    )[0][1];
+    const download_size = parseInt(
+        Array.from(descFile.matchAll(/%CSIZE%\n([^\n]+)/g))[0][1],
+    );
+    const install_size = parseInt(
+        Array.from(descFile.matchAll(/%ISIZE%\n([^\n]+)/g))[0][1],
+    );
+    const md5sum = Array.from(descFile.matchAll(/%MD5SUM%\n([^\n]+)/g))[0]?.[1];
+    const sha256sum = Array.from(
+        descFile.matchAll(/%SHA256SUM%\n([^\n]+)/g),
+    )[0]?.[1];
+    return {
+        name,
+        file_name,
+        version,
+        download_size,
+        install_size,
+        md5sum,
+        sha256sum,
+    };
 };
 
 const parseLocalDB = async (dbPath: string): Promise<PacmanDB> => {
-    let extractDir = path.join(
+    const extractDir = path.join(
         TEMP_DIRECTORY,
         path.basename(dbPath).slice(0, -3),
     );
-    if (fs.existsSync(extractDir)) {
-        fs.rmSync(extractDir, { recursive: true });
-    }
-    fs.mkdirSync(extractDir);
+    await fs.promises.rm(extractDir, { recursive: true, force: true });
+    await fs.promises.mkdir(extractDir);
     if (!dbPath.startsWith('/')) {
         dbPath = path.join(process.cwd(), dbPath);
     }
-    child_process.execSync(`bsdtar -xf ${dbPath}`, { cwd: extractDir });
+    await spawnPromiseStrict('bsdtar', ['-xf', dbPath], { cwd: extractDir });
 
-    let parsePackagePromises: Promise<PackageDetails>[] = [];
-    fs.readdirSync(extractDir).forEach((value) => {
-        parsePackagePromises.push(
-            parsePackageDesc(path.join(extractDir, value, 'desc')),
-        );
-    });
+    const parsePackagePromises: Promise<PackageDetails>[] = (
+        await fs.promises.readdir(extractDir)
+    ).map(
+        async (value) =>
+            await parsePackageDesc(path.join(extractDir, value, 'desc')),
+    );
+
     return Promise.allSettled(parsePackagePromises).then((values) => {
-        let fulfilled = values.filter(
+        const fulfilled = values.filter(
             (value) => value.status === 'fulfilled',
         ) as PromiseFulfilledResult<PackageDetails>[];
-        let results: PackageDetails[] = fulfilled.map((value) => value.value);
-        let rejected = values.filter(
+        const results: PackageDetails[] = fulfilled.map((value) => value.value);
+        const rejected = values.filter(
             (value) => value.status === 'rejected',
         ) as PromiseRejectedResult[];
         if (rejected.length > 0) {
             logger.warn(`An error occurred while parsing local DB`);
         }
 
-        let parsedDB: PacmanDB = {};
+        const parsedDB: PacmanDB = {};
 
         results.forEach((value) => {
             parsedDB[value.name] = value;
         });
-        fs.rmSync(extractDir, { recursive: true });
+        fs.promises.rm(extractDir, { recursive: true });
         return parsedDB;
     });
 };
 
 const parseDB = async (dbURI: string): Promise<PacmanDB> => {
-    if (!fs.existsSync(TEMP_DIRECTORY)) {
-        fs.mkdirSync(TEMP_DIRECTORY);
-    }
-    let isURL = dbURI.startsWith('http://') || dbURI.startsWith('https://');
+    await fs.promises.mkdir(TEMP_DIRECTORY, { recursive: true });
+    const isURL = dbURI.startsWith('http://') || dbURI.startsWith('https://');
     if (!isURL) {
         return parseLocalDB(dbURI);
     }
 
-    let dbPath = path.join(TEMP_DIRECTORY, path.basename(dbURI));
-    return downloadFile(dbURI, dbPath).then((_) => {
-        let parsedDB = parseLocalDB(dbPath);
-        parsedDB.then((_) => {
-            fs.rmSync(dbPath);
-        });
-        return parsedDB;
-    });
+    const dbPath = path.join(TEMP_DIRECTORY, path.basename(dbURI));
+    await downloadFile(dbURI, dbPath);
+    const parsedDB = await parseLocalDB(dbPath);
+    await fs.promises.rm(dbPath);
+    return parsedDB;
 };
 
 export default parseDB;

@@ -17,13 +17,13 @@ const downloadSinglePackage = async (
     download_size: number,
     checksums: Checksums = undefined,
 ): Promise<boolean> => {
-    let urls = getMirrors(use_mirror, repo_name, 'package');
+    const urls = await getMirrors(use_mirror, repo_name, 'package');
     for (let url of urls) {
         url = `${url}/${file_name}`;
-        let loaclFilePath = path.join(MIRRORDIR, repo_name, file_name);
+        const localFilePath = path.join(MIRRORDIR, repo_name, file_name);
         try {
-            await downloadFile(`${url}.sig`, `${loaclFilePath}.sig`); // Download `.sig` frist. Reson: issue #1
-            await downloadFile(url, loaclFilePath, download_size, checksums);
+            await downloadFile(`${url}.sig`, `${localFilePath}.sig`); // Download `.sig` frist. Reson: issue #1
+            await downloadFile(url, localFilePath, download_size, checksums);
             return true;
         } catch {}
     }
@@ -31,10 +31,10 @@ const downloadSinglePackage = async (
 };
 
 const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
-    let use_mirror = repo.get('use_mirror') as string;
-    let repo_name = repo.get('name') as string;
-    let _allRepoPkgs = await Packages.findAll({ where: { repo: repo_name } });
-    let allFilesDB = _allRepoPkgs.map((value) => {
+    const use_mirror = repo.get('use_mirror') as string;
+    const repo_name = repo.get('name') as string;
+    const _allRepoPkgs = await Packages.findAll({ where: { repo: repo_name } });
+    const allFilesDB = _allRepoPkgs.map((value) => {
         return {
             file_name: value.get('file_name') as string,
             download_size: value.get('download_size') as number,
@@ -42,10 +42,12 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
             sha256sum: value.get('sha256sum') as string | undefined,
         };
     });
-    let _allFilesDisk = fs.readdirSync(path.join(MIRRORDIR, repo_name));
-    let allFilesDisk: FileExistMap = {};
+    const _allFilesDisk = await fs.promises.readdir(
+        path.join(MIRRORDIR, repo_name),
+    );
+    const allFilesDisk: FileExistMap = {};
     _allFilesDisk.forEach((element) => (allFilesDisk[element] = true));
-    for (let i of allFilesDB) {
+    for (const i of allFilesDB) {
         if (allFilesDisk[i.file_name]) {
             continue;
         }
@@ -66,8 +68,8 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
 };
 
 const downloadPkgs = async (): Promise<void> => {
-    let repos = await Repos.findAll();
-    for (let repo of repos) {
+    const repos = await Repos.findAll();
+    for (const repo of repos) {
         try {
             await downloadSingleRepo(repo);
         } catch (err) {

@@ -22,12 +22,14 @@ const getEtagAndLastModified = async (url: string): Promise<EtagLastMod> => {
     });
 };
 
-const getMirrors = (
+const getMirrors = async (
     mirror: string,
     repo: string,
     purpose = 'package',
-): Array<string> => {
-    let mirrors = fs.readFileSync(UPSTREAM_MIRRORS, { encoding: 'utf8' });
+): Promise<Array<string>> => {
+    let mirrors = await fs.promises.readFile(UPSTREAM_MIRRORS, {
+        encoding: 'utf8',
+    });
     let arch = process.env.ARCH || 'x86_64';
     mirrors = mirrors.replaceAll('$repo', repo).replaceAll('$arch', arch);
     let mirror_list = JSON.parse(mirrors)[mirror];

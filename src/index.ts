@@ -7,7 +7,7 @@ import { PORT } from './config';
 
 const start = async () => {
     logger.info('Starting pacano...');
-    assertBsdtar();
+    await assertBsdtar();
     await connectOrExit();
 
     app.listen(PORT, () => {
