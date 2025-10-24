@@ -34,14 +34,20 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
     const use_mirror = repo.get('use_mirror') as string;
     const repo_name = repo.get('name') as string;
     const _allRepoPkgs = await Packages.findAll({ where: { repo: repo_name } });
-    const allFilesDB = _allRepoPkgs.map((value) => {
-        return {
-            file_name: value.get('file_name') as string,
-            download_size: value.get('download_size') as number,
-            md5sum: value.get('md5sum') as string | undefined,
-            sha256sum: value.get('sha256sum') as string | undefined,
-        };
-    });
+    const allFilesDB = _allRepoPkgs
+        .map((value) => {
+            return {
+                file_name: value.get('file_name') as string,
+                download_size: value.get('download_size') as number,
+                md5sum: value.get('md5sum') as string | undefined,
+                sha256sum: value.get('sha256sum') as string | undefined,
+            };
+        })
+        .sort((a, b) =>
+            a.file_name.localeCompare(b.file_name, undefined, {
+                sensitivity: 'base',
+            }),
+        );
     const _allFilesDisk = await fs.promises.readdir(
         path.join(MIRRORDIR, repo_name),
     );
