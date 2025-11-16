@@ -38,6 +38,13 @@ const checkIfNeedsUpdate = async (
     if (!localDBElement.sha256sum && parsedDBElement.sha256sum) {
         return [true, 0];
     }
+    if (
+        localDBElement.sha256sum &&
+        parsedDBElement.sha256sum &&
+        localDBElement.sha256sum !== parsedDBElement.sha256sum
+    ) {
+        return [true, 0];
+    }
     return [false, 0];
 };
 
