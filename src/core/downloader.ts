@@ -28,6 +28,10 @@ const checkChecksums = async (
     filePath: string,
     checksums: Checksums,
 ): Promise<void> => {
+    const expectedVsActual: Record<
+        string,
+        { expected: string; actual: string }
+    > = {};
     if (checksums?.sha256sum) {
         logger.verbose(`Checking SHA256 checksum of ${filePath}`);
         const sha256sum = (
@@ -37,6 +41,10 @@ const checkChecksums = async (
         ).stdout
             .trim()
             .split(' ')[0];
+        expectedVsActual['sha256sum'] = {
+            expected: checksums.sha256sum,
+            actual: sha256sum,
+        };
         if (sha256sum === checksums.sha256sum) {
             logger.verbose(`Matched SHA256 checksum of ${filePath}`);
             return;
@@ -51,12 +59,20 @@ const checkChecksums = async (
         ).stdout
             .trim()
             .split(' ')[0];
+        expectedVsActual['md5sum'] = {
+            expected: checksums.md5sum,
+            actual: md5sum,
+        };
         if (md5sum === checksums.md5sum) {
             logger.verbose(`Matched MD5 checksum of ${filePath}`);
             return;
         }
     }
-    logger.error(`Checksums of ${filePath} do not match.`);
+    logger.error(
+        `Checksums of ${filePath} do not match.\n${JSON.stringify(
+            expectedVsActual,
+        )}`,
+    );
     throw new Error(`Checksums of ${filePath} do not match.`);
 };
 
@@ -65,20 +81,18 @@ const checkIfSizeCorrect = async (
     download_size: number,
     checksums: Checksums = undefined,
 ): Promise<void> => {
-    if (
-        download_size === 0 ||
-        (await fs.promises.stat(filePath)).size === download_size
-    ) {
+    const actualSize = (await fs.promises.stat(filePath)).size;
+    if (download_size === 0 || actualSize === download_size) {
         return;
     }
+    logger.warn(
+        `Downloaded file ${filePath} is not the correct size (expected ${download_size} got ${actualSize}). Checking checksums...`,
+    );
     if (!(checksums?.md5sum || checksums?.sha256sum)) {
-        const errorStr = `Downloaded file ${filePath} is not the correct size. And no checksums are provided.`;
+        const errorStr = `No checksums are provided.`;
         logger.error(errorStr);
         throw new Error(errorStr);
     }
-    logger.warn(
-        `Downloaded file ${filePath} is not the correct size. Checking checksums...`,
-    );
     return checkChecksums(filePath, checksums);
 };
 
