@@ -10,9 +10,8 @@ const start = async () => {
     await assertBsdtar();
     await connectOrExit();
 
-    app.listen(PORT, () => {
-        logger.info(`Server started on port ${PORT}.`);
-    });
+    Bun.serve({ port: PORT, hostname: '::', fetch: app });
+    logger.info(`Server started on port ${PORT}.`);
     syncMain();
 };
 

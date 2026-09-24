@@ -1,11 +1,10 @@
-import axios from 'axios';
-import fs from 'fs';
-import fs_extra from 'fs-extra';
-import path from 'path';
-import crypto from 'crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
 import logger from '../logger';
 import { CURL_PATH, DOWNLOADER, TEMP_DIRECTORY_DL } from '../config';
 import { spawnPromise, spawnPromiseStrict } from '../utils';
+import { fetchOk } from './utils';
 
 type Checksums =
     | {
@@ -34,11 +33,7 @@ const checkChecksums = async (
     > = {};
     if (checksums?.sha256sum) {
         logger.verbose(`Checking SHA256 checksum of ${filePath}`);
-        const sha256sum = (
-            await spawnPromise('sha256sum', [filePath], {
-                encoding: 'utf-8',
-            })
-        ).stdout
+        const sha256sum = (await spawnPromise('sha256sum', [filePath])).stdout
             .trim()
             .split(' ')[0];
         expectedVsActual['sha256sum'] = {
@@ -52,11 +47,7 @@ const checkChecksums = async (
     }
     if (checksums?.md5sum) {
         logger.verbose(`Checking MD5 checksum of ${filePath}`);
-        const md5sum = (
-            await spawnPromise('md5sum', [filePath], {
-                encoding: 'utf-8',
-            })
-        ).stdout
+        const md5sum = (await spawnPromise('md5sum', [filePath])).stdout
             .trim()
             .split(' ')[0];
         expectedVsActual['md5sum'] = {
@@ -96,28 +87,25 @@ const checkIfSizeCorrect = async (
     return checkChecksums(filePath, checksums);
 };
 
-const downloadFileAxios = async (
+const moveFile = async (src: string, dest: string): Promise<void> => {
+    await fs.promises.mkdir(path.dirname(dest), { recursive: true });
+    try {
+        await fs.promises.rename(src, dest);
+    } catch (err: any) {
+        if (err.code !== 'EXDEV') {
+            throw err;
+        }
+        await fs.promises.copyFile(src, dest);
+        await fs.promises.rm(src);
+    }
+};
+
+const downloadFileFetch = async (
     url: string,
     downloadPath: string,
 ): Promise<void> => {
-    logger.verbose(`Downloading file using axios from: ${url}`);
-    const fileWrite = fs.createWriteStream(downloadPath);
-    return axios.get(url, { responseType: 'stream' }).then((response) => {
-        return new Promise<void>((resolve, reject) => {
-            response.data.pipe(fileWrite);
-            let error: any = null;
-            fileWrite.on('error', (err) => {
-                error = err;
-                fileWrite.close();
-                reject(err);
-            });
-            fileWrite.on('close', () => {
-                if (!error) {
-                    resolve();
-                }
-            });
-        });
-    });
+    logger.verbose(`Downloading file using fetch from: ${url}`);
+    await Bun.write(downloadPath, await fetchOk(url));
 };
 
 const downloadFileCurl = async (
@@ -161,20 +149,21 @@ const downloadFile = async (
     );
     const downloaderFunc =
         DOWNLOADER.toLocaleLowerCase() === 'axios'
-            ? downloadFileAxios
+            ? downloadFileFetch
             : downloadFileCurl;
     return downloaderFunc(url, tempFile)
         .then((_) => {
             return checkIfSizeCorrect(tempFile, download_size, checksums);
         })
         .then((_) => {
-            fs_extra.moveSync(tempFile, downloadPath, { overwrite: true });
+            return moveFile(tempFile, downloadPath);
         })
-        .catch((err) => {
-            removeFileIfExist(tempFile);
+        .catch(async (err) => {
+            await removeFileIfExist(tempFile).catch(() => {});
             logger.error(`Downloading failed with error: ${err}`);
             throw err;
         });
 };
 
-export { downloadFile, Checksums };
+export { downloadFile };
+export type { Checksums };

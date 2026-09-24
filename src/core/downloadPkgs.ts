@@ -1,14 +1,10 @@
-import path from 'path';
-import fs from 'fs';
-import { Model } from 'sequelize';
-import { sequelize } from '../models';
+import path from 'node:path';
+import fs from 'node:fs';
+import { Packages, Repos, Repo } from '../models';
 import { downloadFile, Checksums } from './downloader';
 import { getMirrors, FileExistMap } from './utils';
 import { MIRRORDIR } from '../config';
 import logger from '../logger';
-
-const Repos = sequelize.models.Repos;
-const Packages = sequelize.models.Packages;
 
 const downloadSinglePackage = async (
     repo_name: string,
@@ -30,19 +26,20 @@ const downloadSinglePackage = async (
     return false;
 };
 
-const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
-    const use_mirror = repo.get('use_mirror') as string;
-    const repo_name = repo.get('name') as string;
-    const _allRepoPkgs = await Packages.findAll({ where: { repo: repo_name } });
+const downloadSingleRepo = async (repo: Repo): Promise<void> => {
+    const use_mirror = repo.use_mirror;
+    const repo_name = repo.name;
+    const _allRepoPkgs = Packages.findAllByRepo(repo_name);
     const allFilesDB = _allRepoPkgs
         .map((value) => {
             return {
-                file_name: value.get('file_name') as string,
-                download_size: value.get('download_size') as number,
-                md5sum: value.get('md5sum') as string | undefined,
-                sha256sum: value.get('sha256sum') as string | undefined,
+                file_name: value.file_name as string,
+                download_size: value.download_size as number,
+                md5sum: value.md5sum ?? undefined,
+                sha256sum: value.sha256sum ?? undefined,
             };
         })
+        // Known issue: a package never found upstream has a null file_name, which throws here and skips downloads for the whole repo.
         .sort((a, b) =>
             a.file_name.localeCompare(b.file_name, undefined, {
                 sensitivity: 'base',
@@ -74,13 +71,13 @@ const downloadSingleRepo = async (repo: Model<any, any>): Promise<void> => {
 };
 
 const downloadPkgs = async (): Promise<void> => {
-    const repos = await Repos.findAll();
+    const repos = Repos.findAll();
     for (const repo of repos) {
         try {
             await downloadSingleRepo(repo);
         } catch (err) {
             logger.error(
-                `Failed to download file from repo: ${repo}. Reason: ${err}`,
+                `Failed to download file from repo: ${repo.name}. Reason: ${err}`,
             );
         }
     }

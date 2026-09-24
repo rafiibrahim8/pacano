@@ -1,153 +1,108 @@
-import { sequelize } from '../models';
-import express from 'express';
+import { Packages, Repos } from '../models';
 import { getMirrors } from '../core/utils';
 import { UPSTREAM_MIRRORS } from '../config';
 
-const Packages = sequelize.models.Packages;
-const Repos = sequelize.models.Repos;
+type Params = Record<string, string>;
 
-const getAllPackages = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    let packages_ = await Packages.findAll({ attributes: ['name'] });
-    let packages = packages_.map((p: any) => p.name);
-    res.json(packages);
+const json = (status: number, data: unknown): Response =>
+    new Response(JSON.stringify(data), {
+        status,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    });
+
+const getAllPackages = async (): Promise<Response> => {
+    return json(200, Packages.findNames());
 };
 
-const getPackages = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    let repo = await Repos.findOne({ where: { name: req.params.repo } });
+const getPackages = async (params: Params): Promise<Response> => {
+    let repo = Repos.findOne(params.repo);
     if (!repo) {
-        res.status(404).json({ msg: `Repo ${req.params.repo} not found` });
-        return;
+        return json(404, { msg: `Repo ${params.repo} not found` });
     }
-    let packages_ = await Packages.findAll({
-        where: { repo: req.params.repo },
-        attributes: ['name'],
-    });
-    let packages = packages_.map((p: any) => p.name);
-    res.status(200).json(packages);
+    return json(200, Packages.findNamesByRepo(params.repo));
 };
 
-const getPackage = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    let package_ = await Packages.findOne({
-        where: { name: req.params.package },
-    });
+const getPackage = async (params: Params): Promise<Response> => {
+    let package_ = Packages.findOne(params.package);
     if (package_) {
-        res.status(200).json(package_);
-        return;
+        return json(200, Packages.toJSON(package_));
     }
-    res.status(404).json({ msg: `Package ${req.params.package} not found` });
+    return json(404, { msg: `Package ${params.package} not found` });
 };
 
-const addPackage = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    if (!Array.isArray(req.body)) {
-        res.status(400).json({ msg: 'Body must be an array.' });
-        return;
+const addPackage = async (params: Params, body: any): Promise<Response> => {
+    if (!Array.isArray(body)) {
+        return json(400, { msg: 'Body must be an array.' });
     }
 
     try {
-        await Packages.bulkCreate(req.body, {
-            updateOnDuplicate: ['repo'],
-            validate: true,
-        });
-        res.status(200).json({ msg: 'Success' });
+        Packages.bulkCreate(body, ['repo']);
+        return json(200, { msg: 'Success' });
     } catch (err) {
-        res.status(403).json({ msg: `Bad request. Reason: ${err}` });
+        return json(403, { msg: `Bad request. Reason: ${err}` });
     }
 };
 
-const deletePackage = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    if (!Array.isArray(req.body)) {
-        res.status(400).json({ msg: 'Body must be an array.' });
-        return;
+const deletePackage = async (params: Params, body: any): Promise<Response> => {
+    if (!Array.isArray(body)) {
+        return json(400, { msg: 'Body must be an array.' });
     }
-    let totalRemoved = await Packages.destroy({ where: { name: req.body } });
+    let totalRemoved = Packages.destroy(body);
     if (totalRemoved) {
-        res.status(200).json({ msg: `Removed ${totalRemoved} items` });
-    } else {
-        res.status(404).json({ msg: 'Packages not found' });
+        return json(200, { msg: `Removed ${totalRemoved} items` });
     }
+    return json(404, { msg: 'Packages not found' });
 };
 
-const getRepos = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    let repos_ = await Repos.findAll({ attributes: ['name'] });
-    let repos = repos_.map((r: any) => r.name);
-    res.status(200).json(repos);
+const getRepos = async (): Promise<Response> => {
+    return json(200, Repos.findNames());
 };
 
-const getRepo = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    let repo = await Repos.findOne({ where: { name: req.params.repo } });
+const getRepo = async (params: Params): Promise<Response> => {
+    let repo = Repos.findOne(params.repo);
     if (repo) {
-        res.status(200).json(repo);
-        return;
+        return json(200, Repos.toJSON(repo));
     }
-    res.status(404).json({ msg: `Repo ${req.params.repo} not found` });
+    return json(404, { msg: `Repo ${params.repo} not found` });
 };
 
-const addRepo = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    if (!(req.body.name && req.body.mirror)) {
-        res.status(400).json({ msg: 'name and mirror is required.' });
-        return;
+const addRepo = async (params: Params, body: any): Promise<Response> => {
+    if (!(body.name && body.mirror)) {
+        return json(400, { msg: 'name and mirror is required.' });
     }
     try {
-        await getMirrors(req.body.mirror, req.body.repo);
+        await getMirrors(body.mirror, body.repo);
     } catch {
-        res.status(403).json({
-            msg: `mirror ${req.body.mirror} not found in ${UPSTREAM_MIRRORS}`,
+        return json(403, {
+            msg: `mirror ${body.mirror} not found in ${UPSTREAM_MIRRORS}`,
         });
-        return;
     }
-    let item_ = await Repos.findOne({ where: { name: req.body.name } });
-    let item = { name: req.body.name, use_mirror: req.body.mirror };
+    let item_ = Repos.findOne(body.name);
     if (item_) {
-        await item_.update(item);
-        res.status(200).json({ msg: 'Modified' });
-        return;
+        if (item_.use_mirror !== body.mirror) {
+            Repos.update(body.name, { use_mirror: body.mirror });
+        }
+        return json(200, { msg: 'Modified' });
     }
-    await Repos.create(item);
-    res.status(201).json({ msg: 'Created' });
+    Repos.create(body.name, body.mirror);
+    return json(201, { msg: 'Created' });
 };
 
-const deleteRepo = async (
-    req: express.Request,
-    res: express.Response,
-): Promise<void> => {
-    if (!req.body.name) {
-        res.status(400).json({ msg: 'name is required.' });
-        return;
+const deleteRepo = async (params: Params, body: any): Promise<Response> => {
+    if (!body.name) {
+        return json(400, { msg: 'name is required.' });
     }
-    await Packages.destroy({ where: { repo: req.body.name } });
-    let totalRemoved = await Repos.destroy({ where: { name: req.body.name } });
+    Packages.destroyByRepo(body.name);
+    let totalRemoved = Repos.destroy(body.name);
     if (totalRemoved) {
-        res.status(200).json({ msg: 'Removed' });
-    } else {
-        res.status(404).json({ msg: 'Repo not found' });
+        return json(200, { msg: 'Removed' });
     }
+    return json(404, { msg: 'Repo not found' });
 };
 
+export type { Params };
 export {
+    json,
     getAllPackages,
     getPackage,
     getPackages,

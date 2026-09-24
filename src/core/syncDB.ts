@@ -1,10 +1,9 @@
-import path from 'path';
-import axios from 'axios';
+import path from 'node:path';
 import parseDB, { PacmanDB } from './parseDB';
-import { Model } from 'sequelize';
-import { sequelize } from '../models';
+import { Packages, Repos, Repo } from '../models';
 import { downloadFile } from './downloader';
 import {
+    fetchOk,
     getMirrors,
     getEtagAndLastModified,
     EtagLastMod,
@@ -17,11 +16,8 @@ import {
     REMOVE_IF_PACKAGE_NOT_FOUND,
 } from '../config';
 import logger from '../logger';
-import fs from 'fs';
+import fs from 'node:fs';
 import { isExistPath } from '../utils';
-
-const Repos = sequelize.models.Repos;
-const Packages = sequelize.models.Packages;
 
 enum PackageStatus {
     UPDATE = 'update',
@@ -52,22 +48,20 @@ const checkIfFound = async (pkg: any): Promise<[boolean, boolean]> => {
     if (!pkg) {
         return [false, false];
     }
-    return Repos.findOne({ where: { name: pkg.repo } }).then((repo) => {
-        if (!repo) {
-            return [true, false];
-        }
-        return [true, true];
-    });
+    if (!Repos.findOne(pkg.repo)) {
+        return [true, false];
+    }
+    return [true, true];
 };
 
 const resolveRepoChange = async (
     pkg_name: string,
     times_updated: number,
 ): Promise<any> => {
-    return axios
-        .get(`https://archlinux.org/packages/search/json/?name=${pkg_name}`)
-        .then((response) => {
-            let pkg = response.data.results[0];
+    return fetchOk(`https://archlinux.org/packages/search/json/?name=${pkg_name}`)
+        .then((response) => response.json())
+        .then((data: any) => {
+            let pkg = data.results[0];
             return checkIfFound(pkg).then(([found, isRepoTracking]) => {
                 if (found && isRepoTracking) {
                     logger.info(
@@ -162,17 +156,7 @@ const checkSinglePakage = async (
 
 const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
     let repoDbPath = path.join(MIRRORDIR, repo_name, `${repo_name}.db`);
-    let _allRepoPkgs = await Packages.findAll({ where: { repo: repo_name } });
-    let allRepoPkgs = _allRepoPkgs.map((value) => {
-        return {
-            name: value.get('name') as string,
-            repo: value.get('repo') as string,
-            file_name: value.get('file_name') as string,
-            times_updated: value.get('times_updated') as number,
-            md5sum: value.get('md5sum') as string | undefined,
-            sha256sum: value.get('sha256sum') as string | undefined,
-        };
-    });
+    let allRepoPkgs = Packages.findAllByRepo(repo_name);
     return parseDB(repoDbPath).then((parsedDB) => {
         let resultPromises: Promise<any>[] = [];
         allRepoPkgs.forEach((element) => {
@@ -191,28 +175,17 @@ const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
                     .filter((value) => value.type === PackageStatus.UPDATE)
                     .map((value) => value.data);
 
-                const modifyPromises: Promise<any>[] = [];
-
-                modifyPromises.push(
-                    Packages.destroy({ where: { name: toDelete } }),
-                );
-                modifyPromises.push(
-                    Packages.bulkCreate(toUpdate, {
-                        updateOnDuplicate: [
-                            'repo',
-                            'file_name',
-                            'version',
-                            'times_updated',
-                            'download_size',
-                            'install_size',
-                            'md5sum',
-                            'sha256sum',
-                        ],
-                        validate: true,
-                    }),
-                );
-
-                return Promise.all(modifyPromises);
+                Packages.destroy(toDelete);
+                Packages.bulkCreate(toUpdate, [
+                    'repo',
+                    'file_name',
+                    'version',
+                    'times_updated',
+                    'download_size',
+                    'install_size',
+                    'md5sum',
+                    'sha256sum',
+                ]);
             })
             .catch((err) => {
                 logger.error(
@@ -223,11 +196,11 @@ const syncLocalDBSingle = async (repo_name: string): Promise<void> => {
     });
 };
 
-const syncSingle = async (repo: Model<any, any>): Promise<void> => {
-    let use_mirror = repo.get('use_mirror') as string;
-    let repo_name = repo.get('name') as string;
-    let etag = repo.get('etag') as string;
-    let last_modified = repo.get('last_modified') as string;
+const syncSingle = async (repo: Repo): Promise<void> => {
+    let use_mirror = repo.use_mirror;
+    let repo_name = repo.name;
+    let etag = repo.etag;
+    let last_modified = repo.last_modified;
     let urls = await getMirrors(use_mirror, repo_name, 'db');
     let etag_lastmod: EtagLastMod;
     let repoLocalDir = path.join(MIRRORDIR, repo_name);
@@ -281,7 +254,7 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
             }
             etag_lastmod = await getEtagAndLastModified(db_file_url);
             logger.verbose(`DB download finished...${repo_name}`);
-            await Repos.update(etag_lastmod, { where: { name: repo_name } });
+            Repos.update(repo_name, etag_lastmod);
             await syncLocalDBSingle(repo_name);
             logger.verbose(`DB sync finished...${repo_name}`);
             break;
@@ -290,12 +263,12 @@ const syncSingle = async (repo: Model<any, any>): Promise<void> => {
 };
 
 const syncDB = async (): Promise<void> => {
-    let repos = await Repos.findAll();
+    let repos = Repos.findAll();
     for (let repo of repos) {
         try {
             await syncSingle(repo);
         } catch (err) {
-            logger.error(`Failed to sync ${repo}. Reason: ${err}`);
+            logger.error(`Failed to sync ${repo.name}. Reason: ${err}`);
         }
     }
 };

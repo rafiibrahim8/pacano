@@ -1,20 +1,14 @@
-import path from 'path';
-import fs from 'fs';
-import { Model } from 'sequelize';
-import { sequelize } from '../models';
+import path from 'node:path';
+import fs from 'node:fs';
+import { Packages, Repos, Repo } from '../models';
 import { FileExistMap } from './utils';
 import { MIRRORDIR, TEMP_DIRECTORY } from '../config';
 import logger from '../logger';
 
-const Repos = sequelize.models.Repos;
-const Packages = sequelize.models.Packages;
-
-const removeOldSingleRepo = async (repo: Model<any, any>): Promise<void> => {
-    let repo_name = repo.get('name') as string;
-    let _allRepoPkgs = await Packages.findAll({ where: { repo: repo_name } });
-    let _allFilesDB = _allRepoPkgs.map(
-        (value) => value.get('file_name') as string,
-    );
+const removeOldSingleRepo = async (repo: Repo): Promise<void> => {
+    let repo_name = repo.name;
+    let _allRepoPkgs = Packages.findAllByRepo(repo_name);
+    let _allFilesDB = _allRepoPkgs.map((value) => value.file_name as string);
     let allFilesDisk = await fs.promises.readdir(
         path.join(MIRRORDIR, repo_name),
     );
@@ -44,7 +38,7 @@ const removeOldSingleRepo = async (repo: Model<any, any>): Promise<void> => {
 };
 
 const removeOldPkgs = async (): Promise<void> => {
-    let repos = await Repos.findAll();
+    let repos = Repos.findAll();
     let promiseArray: Promise<void>[] = [];
     repos.forEach((value) => {
         promiseArray.push(removeOldSingleRepo(value));

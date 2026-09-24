@@ -1,7 +1,4 @@
-import dotenv from 'dotenv';
-import path from 'path';
-
-dotenv.config();
+import path from 'node:path';
 
 const TEMP_DIRECTORY = process.env.TEMP_DIRECTORY || '/tmp/pacano';
 const MIRRORDIR = process.env.MIRRORDIR || '/var/archlinux';

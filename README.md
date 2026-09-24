@@ -8,20 +8,14 @@ pacano (pacman+nano) is a mirroring tool for Arch Linux repositories. But instea
 
 # GETTING STARTED
 ## Configuring Server
-1. Install NodeJS (>=16.0.0)
+1. Install [Bun](https://bun.sh)
 2. Install `bsdtar` command
-3. Install `pnpm`
-    ```
-    npm install -g pnpm
-    ```
-4. Clone the repo
+3. Clone the repo
     ```
     git clone https://github.com/rafiibrahim8/pacano.git && cd pacano
     ```
-5. Create a `.env` file add add your configurations (see `.env.example` and [Environment Variables](#environment-variables))
-6. Run `pnpm install`
-7. Run `pnpm run build`
-8. Run `pnpm start`
+4. Create a `.env` file add add your configurations (see `.env.example` and [Environment Variables](#environment-variables))
+5. Run `bun start`
 
 Repositories should be mirrored in `MIRRORDIR` directory of your environment variable. Server a static server from the directory (e.g.: [Using nginx](https://docs.nginx.com/nginx/admin-guide/web-server/serving-static-content/)).
 
