@@ -17,7 +17,11 @@ const syncMainImpl = async () => {
 const syncMain = async (): Promise<never> => {
     while (true) {
         logger.verbose('Mirroring...');
-        await syncMainImpl();
+        try {
+            await syncMainImpl();
+        } catch (err) {
+            logger.error(`Sync failed. Reason: ${err}`);
+        }
         logger.verbose('Going to sleep...');
         await waitSeconds(SYNC_INTERVAL);
     }

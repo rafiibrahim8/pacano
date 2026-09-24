@@ -1,32 +1,21 @@
-import { Sequelize } from 'sequelize';
-import { logSequelize } from '../logger';
+import { db } from './db';
 import Packages from './Packages';
 import Repos from './Repos';
 import KeyValuePairs from './KeyValuePairs';
 
-const sequelize = new Sequelize({
-    dialect: 'sqlite',
-    storage: 'database.sqlite',
-    logging: logSequelize,
-});
-
-Packages(sequelize);
-Repos(sequelize);
-KeyValuePairs(sequelize);
-
 const hasConnection = async (): Promise<boolean> => {
-    return sequelize
-        .authenticate()
-        .then((_) => {
-            return true;
-        })
-        .catch((_) => {
-            return false;
-        });
+    try {
+        db.query('SELECT 1+1 AS result').get();
+        return true;
+    } catch {
+        return false;
+    }
 };
 
 const connectOrExit = async (): Promise<void> => {
-    await sequelize.sync();
+    Repos.createTable();
+    Packages.createTable();
+    KeyValuePairs.createTable();
     let success = await hasConnection();
     if (!success) {
         console.log('DB connection failed!');
@@ -34,4 +23,6 @@ const connectOrExit = async (): Promise<void> => {
     }
 };
 
-export { sequelize, connectOrExit, hasConnection };
+export { Packages, Repos, KeyValuePairs, connectOrExit, hasConnection };
+export type { Package } from './Packages';
+export type { Repo } from './Repos';

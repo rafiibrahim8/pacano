@@ -1,6 +1,5 @@
-import child_process from 'child_process';
-import path from 'path';
-import fs from 'fs';
+import path from 'node:path';
+import fs from 'node:fs';
 import { downloadFile } from './downloader';
 import { TEMP_DIRECTORY_DB } from '../config';
 import logger from '../logger';
@@ -71,7 +70,7 @@ const parseLocalDB = async (dbPath: string): Promise<PacmanDB> => {
             await parsePackageDesc(path.join(extractDir, value, 'desc')),
     );
 
-    return Promise.allSettled(parsePackagePromises).then((values) => {
+    return Promise.allSettled(parsePackagePromises).then(async (values) => {
         const fulfilled = values.filter(
             (value) => value.status === 'fulfilled',
         ) as PromiseFulfilledResult<PackageDetails>[];
@@ -88,7 +87,9 @@ const parseLocalDB = async (dbPath: string): Promise<PacmanDB> => {
         results.forEach((value) => {
             parsedDB[value.name] = value;
         });
-        fs.promises.rm(extractDir, { recursive: true });
+        await fs.promises
+            .rm(extractDir, { recursive: true })
+            .catch(() => {});
         return parsedDB;
     });
 };

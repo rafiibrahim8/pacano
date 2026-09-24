@@ -1,23 +1,28 @@
-import axios from 'axios';
-import fs from 'fs';
+import fs from 'node:fs';
 import { UPSTREAM_MIRRORS } from '../config';
-import { sequelize } from '../models';
-
-const KeyValuePairs = sequelize.models.KeyValuePairs;
+import { KeyValuePairs } from '../models';
 
 interface EtagLastMod {
-    etag: string;
-    last_modified: string;
+    etag?: string;
+    last_modified?: string;
 }
 
 interface FileExistMap {
     [key: string]: boolean;
 }
 
+const fetchOk = async (url: string, init?: RequestInit): Promise<Response> => {
+    const response = await fetch(url, init);
+    if (!response.ok) {
+        throw new Error(`Request failed with status code ${response.status}`);
+    }
+    return response;
+};
+
 const getEtagAndLastModified = async (url: string): Promise<EtagLastMod> => {
-    return axios.head(url).then((response) => {
-        let etag = response.headers['etag'];
-        let last_modified = response.headers['last-modified'];
+    return fetchOk(url, { method: 'HEAD' }).then((response) => {
+        let etag = response.headers.get('etag') ?? undefined;
+        let last_modified = response.headers.get('last-modified') ?? undefined;
         return { etag, last_modified };
     });
 };
@@ -49,13 +54,13 @@ const waitSeconds = async (seconds: number) => {
 };
 
 const setValue = async (key: string, value: any) => {
-    await KeyValuePairs.upsert({ key, value: JSON.stringify(value) });
+    KeyValuePairs.upsert(key, JSON.stringify(value));
 };
 
 const getValue = async (key: string, default_value: any = null) => {
-    let value = await KeyValuePairs.findOne({ where: { key } });
+    let value = KeyValuePairs.findOne(key);
     if (value) {
-        return JSON.parse(value.get('value') as string);
+        return JSON.parse(value.value);
     }
     return default_value;
 };
@@ -65,7 +70,7 @@ export {
     getValue,
     getMirrors,
     getEtagAndLastModified,
+    fetchOk,
     waitSeconds,
-    EtagLastMod,
-    FileExistMap,
 };
+export type { EtagLastMod, FileExistMap };
